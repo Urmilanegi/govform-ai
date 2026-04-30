@@ -709,7 +709,7 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
   try {
     send('start', '🌐 RRB portal khol raha hoon...');
     await page.goto(RRB_BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000); // Angular SPA hydration wait
     if (await isErrorPage(page)) {
       await redirectToRegistration(page, 'RRB base page wrong route par gayi thi, registration page par le ja raha hoon...');
     }
@@ -742,6 +742,7 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
         }
         if (pageCheck.is404 || !pageCheck.hasForm) {
           send('progress', '⚠️ Registration page nahi mili — screenshot le raha hoon aur manual input maang raha hoon');
+          await page.waitForTimeout(3000); // Angular render ka wait
           await saveScreenshot(page, '📸 Current browser screen:');
           send('otp', '⚠️ Registration form nahi mila. Kya RRB site pe koi active notification hai? "YES" type karo agar manually dekhna chahte ho, "SKIP" type karo agar directly login karna hai:', { otpFile: OTP_FILE });
           const choice = await waitForInput(OTP_FILE);
@@ -938,6 +939,10 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
         send('progress', mobileOtpClicked ? '✅ Mobile OTP generate ho raha hai...' : '⚠️ Mobile OTP button nahi mila — manually click karo');
         await page.waitForTimeout(2000);
 
+        // Screenshot of current page state before asking OTP
+        await page.waitForTimeout(1500);
+        await saveScreenshot(page, '📸 OTP page — browser mein dekho');
+
         // Tell user to fill both OTPs manually in browser, then confirm
         send('otp', '📧📱 Browser mein Email OTP aur Mobile OTP dono manually fill karo — dono fill karne ke baad yahan "done" type karo:', { otpFile: OTP_FILE });
         await waitForInput(OTP_FILE);
@@ -1001,6 +1006,9 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
         });
         send('progress', aadhaarOtpBtn ? `✅ "${aadhaarOtpBtn}" clicked` : '⚠️ Aadhaar OTP button nahi mila — manually click karo');
         await page.waitForTimeout(2000);
+
+        // Screenshot before asking Aadhaar OTP
+        await saveScreenshot(page, '📸 Aadhaar OTP page');
 
         // User fills Aadhaar OTP in browser manually, then clicks Verify
         send('otp', '🪪 Aadhaar OTP browser mein fill karo aur "Verify" click karo — phir yahan "done" type karo:', { otpFile: OTP_FILE });
