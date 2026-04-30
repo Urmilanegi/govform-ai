@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "app/api/**": {
+      "maxDuration": 60
+    }
+  },
+  "buildCommand": "next build",
+  "framework": "nextjs"
+}
