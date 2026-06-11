@@ -88,7 +88,7 @@ export function Parallax({ speed = 0.25, children, className = '', style }: {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
   }, [speed]);
-  return <div ref={ref} className={className} style={style}>{children}</div>;
+  return <div ref={ref} className={className} style={{ willChange: 'transform', ...style }}>{children}</div>;
 }
 
 /* ── Count-up number when scrolled into view ── */
