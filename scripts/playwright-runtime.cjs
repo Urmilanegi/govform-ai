@@ -6,6 +6,7 @@ function isServerlessRuntime() {
   return Boolean(
     process.env.GOVFORM_SERVERLESS === '1' ||
     process.env.VERCEL ||
+    process.env.RENDER ||
     process.env.AWS_LAMBDA_FUNCTION_VERSION ||
     process.env.LAMBDA_TASK_ROOT
   );
