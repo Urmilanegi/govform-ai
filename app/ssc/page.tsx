@@ -90,38 +90,23 @@ function getPdfRoute(examId: string): string {
 
 const STORAGE_KEY = 'govform_profile'; // universal — sabhi exams ke liye
 
-// ── Robot animation component ──────────────────────────────────────
+// ── Bot "typing" bubble — same style as chat messages ──────────────
 function Robot({ label }: { label: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-4">
-      <div className="relative" style={{ width: 72, height: 80 }}>
-        {/* Head */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-10 rounded-xl border-2 border-violet-400 flex items-center justify-center gap-2"
-          style={{ background: 'rgba(0,220,130,0.15)', animation: 'robotBob 1.2s ease-in-out infinite' }}>
-          <div className="w-2 h-2 rounded-full bg-violet-400" style={{ animation: 'eyeBlink 2.5s ease-in-out infinite' }} />
-          <div className="w-2 h-2 rounded-full bg-violet-400" style={{ animation: 'eyeBlink 2.5s ease-in-out infinite 0.1s' }} />
-        </div>
-        {/* Antenna */}
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-violet-400" />
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-violet-300" style={{ animation: 'antennaPulse 1s ease-in-out infinite' }} />
-        {/* Body */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-8 rounded-lg border-2 border-violet-400/60 flex items-center justify-center"
-          style={{ background: 'rgba(0,220,130,0.1)' }}>
-          <div className="flex gap-1">
-            {[0,1,2].map(i => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-violet-400"
-                style={{ animation: `dotPulse 1s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }} />
-            ))}
-          </div>
+    <div className="flex gap-3 flex-row">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-1"
+        style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)' }}>🤖</div>
+      <div className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm"
+        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)', maxWidth: '80%' }}>
+        <p className="text-gray-300 text-xs mb-2">{label}</p>
+        <div className="flex gap-1.5 items-center">
+          {[0,1,2].map(i => (
+            <div key={i} className="w-2 h-2 rounded-full"
+              style={{ background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
+          ))}
         </div>
       </div>
-      <p className="text-violet-300 text-sm font-semibold text-center">{label}</p>
-      <style>{`
-        @keyframes robotBob { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-4px)} }
-        @keyframes eyeBlink { 0%,90%,100%{transform:scaleY(1)} 95%{transform:scaleY(0.1)} }
-        @keyframes antennaPulse { 0%,100%{opacity:1;transform:translateX(-50%) scale(1)} 50%{opacity:0.4;transform:translateX(-50%) scale(1.4)} }
-        @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
-      `}</style>
+      <style>{`@keyframes botDot { 0%,80%,100%{opacity:0.25;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.15)} }`}</style>
     </div>
   );
 }
