@@ -709,7 +709,9 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
   try {
     send('start', '🌐 RRB portal khol raha hoon...');
     await page.goto(RRB_BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(5000); // Angular SPA hydration wait
+    await page.waitForTimeout(6000); // Angular SPA hydration wait — needs extra time
+    // Wait for any interactive content to appear
+    await page.waitForSelector('button, a, input', { timeout: 10000, state: 'visible' }).catch(() => {});
     if (await isErrorPage(page)) {
       await redirectToRegistration(page, 'RRB base page wrong route par gayi thi, registration page par le ja raha hoon...');
     }
@@ -720,25 +722,60 @@ async function submitOtpWithRetry(page, otpSelector, verifyBtnPattern, label, ma
       send('progress', '📝 New Registration shuru kar raha hoon...');
       await redirectToRegistration(page, 'Direct registration route open kar raha hoon...');
 
+      // Wait for Angular SPA to fully hydrate (up to 12s)
+      await page.waitForSelector('input, form, [class*="register"], [class*="signup"]', { timeout: 12000, state: 'attached' }).catch(() => {});
+      await page.waitForTimeout(2000);
+
+      // Try clicking "New Registration" / "Register" button if form not yet visible
+      const regBtnClicked = await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button, a, [role="button"]'));
+        const btn = btns.find(b => {
+          const txt = (b.textContent || b.value || '').toLowerCase().trim();
+          const r = b.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && /new\s*reg|register|create.*account|sign.*up/.test(txt);
+        });
+        if (btn) { btn.click(); return (btn.textContent || '').trim(); }
+        return null;
+      });
+      if (regBtnClicked) {
+        send('progress', `✅ "${regBtnClicked}" button clicked — form load ho raha hai`);
+        await page.waitForSelector('input[type="text"], input[type="tel"], input[type="email"]', { timeout: 10000, state: 'visible' }).catch(() => {});
+        await page.waitForTimeout(1500);
+      }
+
       // Verify we are on a registration page (has form inputs, not 404)
+      // Use lenient check: any visible input OR URL still has flag=true
       let pageCheck = await page.evaluate(() => {
         const url = window.location.href;
-        const hasForm = document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').length > 2;
-        const is404   = url.includes('404') || document.body.innerText.toLowerCase().includes('page not found');
-        return { url, hasForm, is404 };
+        const visibleInputs = Array.from(document.querySelectorAll('input, select, textarea')).filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && !el.disabled && el.type !== 'hidden';
+        });
+        const hasForm = visibleInputs.length > 0 || url.includes('flag=true') || url.includes('register') || url.includes('create');
+        const is404   = document.body.innerText.toLowerCase().includes('page not found') ||
+                        document.body.innerText.toLowerCase().includes('404 ');
+        return { url, hasForm, is404, inputCount: visibleInputs.length };
       });
-      send('progress', `📋 Registration page: ${pageCheck.url} | form: ${pageCheck.hasForm} | 404: ${pageCheck.is404}`);
+      send('progress', `📋 Registration page: ${pageCheck.url} | form: ${pageCheck.hasForm} | inputs: ${pageCheck.inputCount} | 404: ${pageCheck.is404}`);
 
       if (pageCheck.is404 || !pageCheck.hasForm) {
         const recovered = await redirectToRegistration(page, 'Registration page mismatch mili, official create-account route par dubara redirect kar raha hoon...');
         if (recovered) {
+          // Wait extra for Angular re-hydration
+          await page.waitForSelector('input', { timeout: 12000, state: 'visible' }).catch(() => {});
+          await page.waitForTimeout(2000);
           pageCheck = await page.evaluate(() => {
             const url = window.location.href;
-            const hasForm = document.querySelectorAll('input[type="text"], input[type="tel"], input[type="email"]').length > 2;
-            const is404   = url.includes('404') || document.body.innerText.toLowerCase().includes('page not found');
-            return { url, hasForm, is404 };
+            const visibleInputs = Array.from(document.querySelectorAll('input, select, textarea')).filter(el => {
+              const r = el.getBoundingClientRect();
+              return r.width > 0 && r.height > 0 && !el.disabled && el.type !== 'hidden';
+            });
+            const hasForm = visibleInputs.length > 0 || url.includes('flag=true') || url.includes('register') || url.includes('create');
+            const is404   = document.body.innerText.toLowerCase().includes('page not found') ||
+                            document.body.innerText.toLowerCase().includes('404 ');
+            return { url, hasForm, is404, inputCount: visibleInputs.length };
           });
-          send('progress', '✅ Redirect ke baad registration form mil gayi');
+          send('progress', `✅ Redirect ke baad: inputs=${pageCheck.inputCount}, hasForm=${pageCheck.hasForm}`);
         }
         if (pageCheck.is404 || !pageCheck.hasForm) {
           send('progress', '⚠️ Registration page nahi mili — screenshot le raha hoon aur manual input maang raha hoon');

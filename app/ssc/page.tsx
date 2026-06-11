@@ -96,7 +96,7 @@ function Robot({ label }: { label: string }) {
       <div className="relative" style={{ width: 72, height: 80 }}>
         {/* Head */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-10 rounded-xl border-2 border-violet-400 flex items-center justify-center gap-2"
-          style={{ background: 'rgba(124,58,237,0.15)', animation: 'robotBob 1.2s ease-in-out infinite' }}>
+          style={{ background: 'rgba(0,220,130,0.15)', animation: 'robotBob 1.2s ease-in-out infinite' }}>
           <div className="w-2 h-2 rounded-full bg-violet-400" style={{ animation: 'eyeBlink 2.5s ease-in-out infinite' }} />
           <div className="w-2 h-2 rounded-full bg-violet-400" style={{ animation: 'eyeBlink 2.5s ease-in-out infinite 0.1s' }} />
         </div>
@@ -105,7 +105,7 @@ function Robot({ label }: { label: string }) {
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-violet-300" style={{ animation: 'antennaPulse 1s ease-in-out infinite' }} />
         {/* Body */}
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-8 rounded-lg border-2 border-violet-400/60 flex items-center justify-center"
-          style={{ background: 'rgba(124,58,237,0.1)' }}>
+          style={{ background: 'rgba(0,220,130,0.1)' }}>
           <div className="flex gap-1">
             {[0,1,2].map(i => (
               <div key={i} className="w-1.5 h-1.5 rounded-full bg-violet-400"
@@ -121,6 +121,161 @@ function Robot({ label }: { label: string }) {
         @keyframes antennaPulse { 0%,100%{opacity:1;transform:translateX(-50%) scale(1)} 50%{opacity:0.4;transform:translateX(-50%) scale(1.4)} }
         @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
       `}</style>
+    </div>
+  );
+}
+
+// ── Live webcam capture (real camera on our site) ───────────
+// User apni site pe selfie leta hai → /api/capture-photo auto-resize karke
+// govform_cam.y4m bana deta hai → bot use real SSC ke "Capture Live Photo"
+// pe feed kar deta hai.
+function CameraCapture({ label, onDone }: { label: string; onDone: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [shot, setShot] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 640, facingMode: 'user' } });
+        if (cancelled) { s.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = s;
+        if (videoRef.current) { videoRef.current.srcObject = s; await videoRef.current.play().catch(() => {}); }
+      } catch {
+        setStatus('❌ Camera nahi khula — permission do ya file se photo do');
+      }
+    })();
+    return () => { cancelled = true; streamRef.current?.getTracks().forEach(t => t.stop()); };
+  }, []);
+
+  const capture = () => {
+    const v = videoRef.current; if (!v) return;
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth || 480; c.height = v.videoHeight || 640;
+    c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
+    setShot(c.toDataURL('image/jpeg', 0.92));
+  };
+
+  const usePhoto = async () => {
+    if (!shot) return;
+    setBusy(true); setStatus('📤 Photo bhej raha hoon (auto-resize)...');
+    try {
+      const r = await fetch('/api/capture-photo', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: shot }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        setStatus(`✅ Photo ready (${j.sizeKB}KB) — SSC pe capture ho raha hai...`);
+        onDone();
+      } else { setStatus('❌ ' + (j.error || 'fail')); setBusy(false); }
+    } catch (e) { setStatus('❌ ' + (e as Error).message); setBusy(false); }
+  };
+
+  const fromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => setShot(rd.result as string);
+    rd.readAsDataURL(f);
+  };
+
+  return (
+    <div className="rounded-2xl border-2 border-emerald-400 p-5 space-y-3"
+      style={{ background: 'rgba(0,0,0,0.88)', boxShadow: '0 0 30px rgba(16,185,129,0.4)', animation: 'qSlideIn 0.35s ease-out' }}>
+      <p className="text-emerald-300 font-bold text-sm">📷 {label.replace(/ \(Ho jaye.*$/i, '')}</p>
+      <div className="rounded-xl overflow-hidden border border-emerald-400/40 bg-black flex items-center justify-center" style={{ minHeight: 220 }}>
+        {shot
+          ? <img src={shot} alt="captured" style={{ maxHeight: 280, display: 'block' }} />
+          : <video ref={videoRef} muted playsInline style={{ maxHeight: 280, transform: 'scaleX(-1)' }} />}
+      </div>
+      {status && <p className="text-xs text-emerald-200">{status}</p>}
+      <div className="flex gap-2 flex-wrap">
+        {!shot ? (
+          <button onClick={capture} className="flex-1 py-3 rounded-xl font-bold text-sm"
+            style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white' }}>📸 Photo khquo</button>
+        ) : (
+          <>
+            <button onClick={() => setShot('')} disabled={busy} className="px-4 py-3 rounded-xl font-bold text-sm"
+              style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>🔄 Dobara</button>
+            <button onClick={usePhoto} disabled={busy} className="flex-1 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white' }}>✅ Ye photo use karo</button>
+          </>
+        )}
+      </div>
+      <label className="block text-center text-xs text-gray-400 cursor-pointer">
+        ya gallery se photo do
+        <input type="file" accept="image/*" onChange={fromFile} className="hidden" />
+      </label>
+      <style>{`@keyframes qSlideIn { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }`}</style>
+    </div>
+  );
+}
+
+// ── Live stage tracker ──────────────────────────────────────
+// Derives the current portal stage from the streamed log messages,
+// so the user always sees WHERE the bot is — not just raw text.
+const FILL_STAGES = [
+  { key: 'verify',      label: 'Details verify',  icon: '🔍' },
+  { key: 'login',       label: 'Login',           icon: '🔐' },
+  { key: 'apply',       label: 'Apply / Exam',    icon: '📋' },
+  { key: 'personal',    label: 'Personal details',icon: '👤' },
+  { key: 'education',   label: 'Education',        icon: '🎓' },
+  { key: 'upload',      label: 'Photo / Sign',    icon: '🖼️' },
+  { key: 'declaration', label: 'Declaration',     icon: '📜' },
+  { key: 'done',        label: 'Submitted',       icon: '✅' },
+] as const;
+
+function deriveStage(logs: LogEntry[]): { idx: number; failed: boolean } {
+  let idx = 0;
+  let failed = false;
+  for (const l of logs) {
+    const m = l.message.toLowerCase();
+    if (l.type === 'error') failed = true;
+    if (m.includes('verify') || m.includes('details verified')) idx = Math.max(idx, 0);
+    if (m.includes('login')) idx = Math.max(idx, 1);
+    if (m.includes('apply') || m.includes('examination') || m.includes('fill form')) idx = Math.max(idx, 2);
+    if (m.includes('personal') || m.includes('name') || m.includes('address') || m.includes('father') || m.includes('mother')) idx = Math.max(idx, 3);
+    if (m.includes('education') || m.includes('qualification') || m.includes('graduation') || m.includes('10th') || m.includes('12th') || m.includes('matric')) idx = Math.max(idx, 4);
+    if (m.includes('photo') || m.includes('sign') || m.includes('upload')) idx = Math.max(idx, 5);
+    if (m.includes('declaration') || m.includes('preview') || m.includes('checkbox')) idx = Math.max(idx, 6);
+    if (l.type === 'done' || m.includes('submitted') || m.includes('final submit')) idx = 7;
+  }
+  return { idx, failed };
+}
+
+function StepTracker({ logs, running }: { logs: LogEntry[]; running: boolean }) {
+  const { idx, failed } = deriveStage(logs);
+  return (
+    <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex flex-wrap gap-1.5">
+        {FILL_STAGES.map((s, i) => {
+          const isDone    = i < idx || (i === idx && idx === 7);
+          const isCurrent = i === idx && running && idx !== 7;
+          const isFailed  = i === idx && failed;
+          const bg = isFailed ? 'rgba(248,113,113,0.15)'
+            : isDone ? 'rgba(34,197,94,0.15)'
+            : isCurrent ? 'rgba(0,220,130,0.18)'
+            : 'rgba(255,255,255,0.04)';
+          const bd = isFailed ? 'rgba(248,113,113,0.5)'
+            : isDone ? 'rgba(34,197,94,0.4)'
+            : isCurrent ? 'rgba(0,220,130,0.6)'
+            : 'rgba(255,255,255,0.08)';
+          const col = isFailed ? '#f87171' : isDone ? '#4ade80' : isCurrent ? '#c4b5fd' : '#6b7280';
+          return (
+            <div key={s.key} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: bg, border: `1px solid ${bd}`, color: col,
+                ...(isCurrent ? { animation: 'stagePulse 1.2s ease-in-out infinite' } : {}) }}>
+              <span>{isFailed ? '⚠️' : isDone ? '✅' : isCurrent ? s.icon : s.icon}</span>
+              <span>{s.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <style>{`@keyframes stagePulse { 0%,100%{opacity:1} 50%{opacity:0.55} }`}</style>
     </div>
   );
 }
@@ -152,6 +307,7 @@ export default function SSCPage() {
   const [captchaCancelled, setCaptchaCancelled] = useState(false);
   const captchaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOtp, setShowOtp]       = useState(false);
+  const [faceAuth, setFaceAuth]     = useState<{ message: string; appLink: string; steps: string[] } | null>(null);
   const [otpInput, setOtpInput]     = useState('');
   const [otpLabel, setOtpLabel]     = useState('');
   const [done, setDone]             = useState(false);
@@ -437,6 +593,13 @@ export default function SSCPage() {
           setShowOtp(true);
           setShowCaptcha(false);
         }
+        if (data.type === 'faceauth') {
+          const fa = data as LogEntry & { appLink?: string; steps?: string[] };
+          setFaceAuth({ message: fa.message || '', appLink: fa.appLink || '', steps: fa.steps || [] });
+        }
+        if (data.type === 'progress' && /face authentication completed/i.test(data.message || '')) {
+          setFaceAuth(null);
+        }
         if (data.type === 'payment') {
           setLogs(prev => [...prev, {
             ...data,
@@ -493,17 +656,24 @@ export default function SSCPage() {
     setCaptchaCancelled(true);
   };
 
-  const submitOtp = async () => {
-    const normalizedOtp = otpInput.trim().replace(/\s+/g, '');
+  // val pass karo to direct submit (Yes/No ya option buttons se);
+  // warna input box ki value use hoti hai.
+  const submitOtp = async (val?: string) => {
+    const raw = (val ?? otpInput).trim();
+    // OTP/captcha jaise single-token answers me spaces hatao; multi-word
+    // answers (center names waghera) me sirf collapse karo.
+    const normalizedOtp = raw.includes(' ') ? raw.replace(/\s+/g, ' ') : raw.replace(/\s+/g, '');
     if (!normalizedOtp) return;
     const apiRoute = getApiRoute(activeExamId);
     await fetch(`/api/${apiRoute}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ otp: normalizedOtp }),
+      // ssc-fill route { solution } padhta hai, kuch purane routes { otp } —
+      // dono bhejo taaki sab jagah kaam kare.
+      body: JSON.stringify({ otp: normalizedOtp, solution: normalizedOtp }),
     });
     setShowOtp(false);
-    setLogs(prev => [...prev, { type: 'progress', message: `✅ OTP submit kiya: ${normalizedOtp}` }]);
+    setLogs(prev => [...prev, { type: 'progress', message: `✅ Jawab bheja: ${normalizedOtp}` }]);
     setOtpInput('');
   };
 
@@ -544,17 +714,14 @@ export default function SSCPage() {
               setStep(27); // SSO step
               return;
             }
-            if (!mother || !mobile || !email) {
-              addMsg('bot', `⚠️ Tumhari details nahi mili. Pehle home page pe documents upload karo — AI sab padh lega!`);
-              setTimeout(() => addMsg('bot', `👉 localhost:3005 pe jao → documents upload karo → wapas aao`), 500);
-              setStep(3);
-            } else if (photoPath && signPath) {
+            // Details/documents server (.env.local) me already saved hain —
+            // backend unhe khud utha leta hai, isliye yahan user se mat maango.
+            if (photoPath && signPath && mother && mobile && email) {
               addMsg('bot', `✅ Sab ready hai! Photo, Signature aur details — sab saved hain. Start karein?`);
-              setStep(5);
             } else {
-              addMsg('bot', `✅ Details saved hain! Bas Photo aur Signature upload karo — phir form fill hoga automatic.`);
-              setStep(3);
+              addMsg('bot', `✅ Server pe saved details aur documents use karunga — sab already set hai. Start karein?`);
             }
+            setStep(5);
           }, 800);
         }, 600);
       }, 500);
@@ -568,16 +735,13 @@ export default function SSCPage() {
     setTimeout(() => {
       addMsg('bot', `✅ Qualification saved!\n🎓 ${degree} from ${university || college}\n📅 Year: ${passingYear} | 📊 ${percentage}%`);
       setTimeout(() => {
-        if (!mother || !mobile || !email) {
-          addMsg('bot', `⚠️ Personal details nahi mili. Documents upload karo.`);
-          setStep(3);
-        } else if (photoPath && signPath) {
+        // Server (.env.local) me details/documents saved hain — yahan mat roko.
+        if (photoPath && signPath && mother && mobile && email) {
           addMsg('bot', `✅ Sab ready hai! Form fill shuru karein?`);
-          setStep(5);
         } else {
-          addMsg('bot', `✅ Qualification saved! Ab Photo aur Signature upload karo.`);
-          setStep(3);
+          addMsg('bot', `✅ Server pe saved details aur documents use karunga. Form fill shuru karein?`);
         }
+        setStep(5);
       }, 600);
     }, 300);
   };
@@ -692,21 +856,21 @@ export default function SSCPage() {
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
-    border: active ? '2px solid #7c3aed' : '1px solid rgba(255,255,255,0.15)',
-    background: active ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.05)',
+    border: active ? '2px solid #00DC82' : '1px solid rgba(255,255,255,0.15)',
+    background: active ? 'rgba(0,220,130,0.3)' : 'rgba(255,255,255,0.05)',
     color: 'white',
     transition: 'all 0.15s',
   });
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #07000f 0%, #0b0b22 60%, #0a0018 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #060807 0%, #08120d 55%, #050706 100%)' }}>
 
       {/* Header */}
       <div className="border-b px-4 py-0 flex items-center gap-3 sticky top-0 z-20"
-        style={{ background: 'rgba(7,0,15,0.85)', backdropFilter: 'blur(20px)', borderColor: 'rgba(255,255,255,0.07)', minHeight: 56 }}>
+        style={{ background: 'rgba(6,8,7,0.85)', backdropFilter: 'blur(20px)', borderColor: 'rgba(120,220,170,0.12)', minHeight: 56 }}>
         {/* Logo */}
         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', boxShadow: '0 0 12px rgba(124,58,237,0.4)' }}>🤖</div>
+          style={{ background: 'linear-gradient(135deg,#00DC82,#00A865)', boxShadow: '0 0 12px rgba(0,220,130,0.4)' }}>🤖</div>
         <div className="flex-1 min-w-0">
           <h1 className="text-white font-bold text-sm leading-tight">GovForm AI</h1>
           <p className="text-gray-500 leading-tight" style={{ fontSize: 10 }}>Auto-Fill Assistant</p>
@@ -720,8 +884,8 @@ export default function SSCPage() {
           )}
           {running && (
             <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-              style={{ background: 'rgba(59,111,255,0.12)', border: '1px solid rgba(59,111,255,0.25)', color: '#7aabff' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+              style={{ background: 'rgba(0,220,130,0.12)', border: '1px solid rgba(0,220,130,0.25)', color: '#7CF5C8' }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#00DC82' }} />
               Live
             </span>
           )}
@@ -737,7 +901,7 @@ export default function SSCPage() {
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {msg.role === 'bot' && (
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-1"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>🤖</div>
+                style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)' }}>🤖</div>
             )}
             <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
               msg.role === 'user'
@@ -745,7 +909,7 @@ export default function SSCPage() {
                 : 'rounded-tl-sm text-gray-100'
             }`} style={{
               background: msg.role === 'user'
-                ? 'linear-gradient(135deg, #7c3aed, #2563eb)'
+                ? 'linear-gradient(135deg, #00DC82, #00A865)'
                 : 'rgba(255,255,255,0.07)',
               border: msg.role === 'bot' ? '1px solid rgba(255,255,255,0.08)' : 'none',
             }}>
@@ -790,7 +954,7 @@ export default function SSCPage() {
               </div>
 
               {/* Info banner */}
-              <div className="px-3 py-2.5 rounded-xl text-xs" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)' }}>
+              <div className="px-3 py-2.5 rounded-xl text-xs" style={{ background: 'rgba(0,220,130,0.12)', border: '1px solid rgba(0,220,130,0.3)' }}>
                 <p className="text-violet-300 font-medium mb-0.5">SSO ID kya hota hai?</p>
                 <p className="text-gray-400">Rajasthan ke sabhi govt exams (RPSC, RSMSSB, REET, Police) ek hi SSO ID se bhar sakte hain. Agar nahi hai toh blank chhodo — main register kar dunga.</p>
               </div>
@@ -823,7 +987,7 @@ export default function SSCPage() {
                   onClick={() => handleSsoDone(false)}
                   disabled={!!ssoInput.id && !ssoInput.pass}
                   className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: 'white' }}
+                  style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)', color: 'white' }}
                 >
                   {ssoInput.id ? '✅ Login karke start karo' : '📋 Mujhe naya register karo'}
                 </button>
@@ -857,7 +1021,7 @@ export default function SSCPage() {
                 onClick={handleCentersDone}
                 disabled={selectedCenters.length === 0}
                 className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all"
-                style={{ background: selectedCenters.length > 0 ? 'linear-gradient(135deg, #7c3aed, #2563eb)' : 'rgba(255,255,255,0.1)', color: 'white' }}
+                style={{ background: selectedCenters.length > 0 ? 'linear-gradient(135deg, #00DC82, #00A865)' : 'rgba(255,255,255,0.1)', color: 'white' }}
               >
                 {selectedCenters.length === 0 ? 'Kam se kam 1 center choose karo' : `✅ ${selectedCenters.length} Center${selectedCenters.length > 1 ? 's' : ''} Confirm karo`}
               </button>
@@ -972,7 +1136,7 @@ export default function SSCPage() {
                 onClick={handleQualificationDone}
                 disabled={!qualification.degree || !qualification.college || !qualification.passingYear || !qualification.percentage}
                 className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all mt-1"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: 'white' }}
+                style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)', color: 'white' }}
               >
                 ✅ Qualification Confirm karo
               </button>
@@ -988,7 +1152,7 @@ export default function SSCPage() {
               {/* No profile saved — redirect hint */}
               {(!mother || !mobile || !email) && (
                 <a href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(124,58,237,0.1)', border: '2px dashed rgba(124,58,237,0.5)' }}>
+                  style={{ background: 'rgba(0,220,130,0.1)', border: '2px dashed rgba(0,220,130,0.5)' }}>
                   <span className="text-2xl">🪪</span>
                   <div className="flex-1">
                     <p className="text-sm text-white font-semibold">Pehle Documents Upload karo</p>
@@ -1020,7 +1184,7 @@ export default function SSCPage() {
               <button onClick={handleDocsUploaded}
                 disabled={!photoPath || !signPath}
                 className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
-                style={{ background: (photoPath && signPath) ? 'linear-gradient(135deg,#7c3aed,#2563eb)' : 'rgba(255,255,255,0.1)', color: 'white' }}>
+                style={{ background: (photoPath && signPath) ? 'linear-gradient(135deg,#00DC82,#00A865)' : 'rgba(255,255,255,0.1)', color: 'white' }}>
                 {photoPath && signPath ? '✅ Aage badhein' : 'Photo aur Signature upload karo'}
               </button>
             </div>
@@ -1066,7 +1230,7 @@ export default function SSCPage() {
               <button onClick={handleDetailsSubmit}
                 disabled={!detailsInput.mother || !detailsInput.mobile || !detailsInput.email}
                 className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', color: 'white' }}>
+                style={{ background: 'linear-gradient(135deg,#00DC82,#00A865)', color: 'white' }}>
                 ✅ Confirm & Aage badhein
               </button>
             </div>
@@ -1078,7 +1242,7 @@ export default function SSCPage() {
           <div className="pl-11 flex gap-2 flex-wrap">
             {saved && photoPath && signPath && mother && mobile && email ? (
               <>
-                <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#7c3aed,#2563eb)', border: 'none' }}>
+                <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
                   🚀 Haan, start karo!
                 </button>
                 <button onClick={() => setStep(3)} style={chipStyle()}>
@@ -1089,7 +1253,7 @@ export default function SSCPage() {
                 </button>
               </>
             ) : (
-              <button onClick={handleStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#7c3aed,#2563eb)', border: 'none' }}>
+              <button onClick={handleStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
                 🚀 Haan, form fill karo!
               </button>
             )}
@@ -1099,6 +1263,8 @@ export default function SSCPage() {
         {/* ── Step 6: Running — Robot + live logs ── */}
         {step === 6 && (
           <div className="pl-11 space-y-3">
+            {logs.length > 0 && <StepTracker logs={logs} running={running} />}
+
             {running && !showCaptcha && (
               <Robot label={
                 logs.length === 0 ? 'Browser kholke SSC site ja raha hoon...' :
@@ -1194,10 +1360,53 @@ export default function SSCPage() {
               </div>
             ))}
 
+            {/* Face Authentication Card — mySSC app required */}
+            {faceAuth && (
+              <div className="rounded-2xl border-2 p-5 space-y-4" style={{ borderColor: '#fbbf24', background: 'rgba(0,0,0,0.85)', boxShadow: '0 0 30px rgba(251,191,36,0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📱</span>
+                  <div>
+                    <p className="text-amber-400 font-bold text-sm">Aadhaar Face Authentication</p>
+                    <p className="text-xs text-gray-400">SSC ka zaroori step — sirf mySSC mobile app se hota hai</p>
+                  </div>
+                  <span className="ml-auto text-xs px-2 py-1 rounded-full animate-pulse" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>
+                    Pending
+                  </span>
+                </div>
+                <ol className="space-y-2">
+                  {faceAuth.steps.map((s, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-200">
+                      <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>{i + 1}</span>
+                      {s}
+                    </li>
+                  ))}
+                </ol>
+                {faceAuth.appLink && (
+                  <a href={faceAuth.appLink} target="_blank" rel="noreferrer"
+                    className="block w-full text-center py-3 rounded-xl font-bold text-sm"
+                    style={{ background: '#fbbf24', color: '#000' }}>
+                    ▶ mySSC App Kholo / Download Karo
+                  </a>
+                )}
+                <p className="text-xs text-center" style={{ color: '#6b7280' }}>
+                  Face auth complete hote hi bot khud detect karke aage badh jayega — yahan kuch nahi karna
+                </p>
+              </div>
+            )}
+
             {/* OTP / input box */}
             {showOtp && (() => {
               const isAadhaar  = /aadhaar/i.test(otpLabel);
               const isDone     = /done|manually|browser mein/i.test(otpLabel);
+              // Bot ke "Yes" ya "No" type sawal → bade clickable buttons
+              const isQuickYesNo = /"Yes" ya "No"/i.test(otpLabel);
+              // Options list wala prompt (jaise exam centers) → option buttons
+              const optionMatch = otpLabel.includes('|')
+                ? otpLabel.split('\n').reverse().find(l => l.includes('|'))
+                : null;
+              const quickOptions = optionMatch
+                ? optionMatch.split('|').map(o => o.trim()).filter(o => o.length > 1 && o.length < 50)
+                : [];
               const isYesNo    = /yes.*no|haan.*nahi|login karoon|already hai|account.*hai/i.test(otpLabel);
               const isRegId    = /registration id|reg id|reg no|otr id/i.test(otpLabel);
               const isPassword = /password type karo/i.test(otpLabel);
@@ -1205,6 +1414,55 @@ export default function SSCPage() {
               const isText     = isDone || isYesNo || isRegId || isPassword || (!isOtp && !isAadhaar);
 
               const isCaptchaInput = /captcha/i.test(otpLabel);
+              const isCamera = /camera kholo|photo khquo|photo khinch|capture.*photo/i.test(otpLabel);
+
+              // Camera prompt → live webcam capture widget (no typing)
+              if (isCamera) {
+                return <CameraCapture label={otpLabel} onDone={() => submitOtp('done')} />;
+              }
+
+              // Yes/No sawal → slide-in card with badi Yes/No buttons (no typing)
+              if (isQuickYesNo) {
+                return (
+                  <div className="rounded-2xl border-2 border-violet-400 p-5 space-y-4"
+                    style={{ background: 'rgba(0,0,0,0.85)', boxShadow: '0 0 30px rgba(139,92,246,0.4)', animation: 'qSlideIn 0.35s ease-out' }}>
+                    <p className="text-violet-300 font-bold text-sm">{otpLabel.replace(/ — "Yes" ya "No".*$/i, '')}</p>
+                    <div className="flex gap-3">
+                      <button onClick={() => submitOtp('Yes')}
+                        className="flex-1 py-4 rounded-xl font-bold text-base"
+                        style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: 'white', boxShadow: '0 4px 14px rgba(22,163,74,0.35)' }}>
+                        ✅ Yes / Haan
+                      </button>
+                      <button onClick={() => submitOtp('No')}
+                        className="flex-1 py-4 rounded-xl font-bold text-base"
+                        style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', color: 'white', boxShadow: '0 4px 14px rgba(220,38,38,0.35)' }}>
+                        ❌ No / Nahi
+                      </button>
+                    </div>
+                    <style>{`@keyframes qSlideIn { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }`}</style>
+                  </div>
+                );
+              }
+
+              // Options list (exam centers waghera) → clickable option buttons
+              if (quickOptions.length >= 2) {
+                return (
+                  <div className="rounded-2xl border-2 border-cyan-400 p-5 space-y-4"
+                    style={{ background: 'rgba(0,0,0,0.85)', boxShadow: '0 0 30px rgba(34,211,238,0.35)', animation: 'qSlideIn 0.35s ease-out' }}>
+                    <p className="text-cyan-300 font-bold text-sm">{otpLabel.split('\n')[0]}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {quickOptions.map(opt => (
+                        <button key={opt} onClick={() => submitOtp(opt.replace(/^NR-/i, '').replace(/\s*\(\d+\)\s*$/, ''))}
+                          className="px-4 py-3 rounded-xl font-semibold text-sm"
+                          style={{ background: 'rgba(34,211,238,0.12)', color: '#a5f3fc', border: '1px solid rgba(34,211,238,0.45)' }}>
+                          📍 {opt}
+                        </button>
+                      ))}
+                    </div>
+                    <style>{`@keyframes qSlideIn { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }`}</style>
+                  </div>
+                );
+              }
 
               return (
                 <div className="rounded-2xl border-2 border-blue-400 p-5 space-y-4" style={{ background: 'rgba(0,0,0,0.8)', boxShadow: '0 0 30px rgba(59,130,246,0.3)' }}>
@@ -1247,9 +1505,9 @@ export default function SSCPage() {
                     maxLength={isAadhaar ? 12 : isOtp ? 8 : 100}
                     style={{ ...inputStyle, fontSize: isText ? 16 : 24, letterSpacing: isText ? 'normal' : '0.4em', textAlign: 'center', border: '2px solid rgba(59,130,246,0.9)' }}
                   />
-                  <button onClick={submitOtp}
+                  <button onClick={() => submitOtp()}
                     className="w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: 'white' }}>
+                    style={{ background: 'linear-gradient(135deg,#00A865,#1d4ed8)', color: 'white' }}>
                     {isDone    ? '✅ Done — Aage badhao' :
                      isYesNo   ? '✅ Submit' :
                      isAadhaar ? 'Submit Aadhaar' :
