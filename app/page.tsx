@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { EXAMS_WITH_POSTS, Post } from '@/lib/posts-data';
 import { NOTIFICATIONS, CATEGORY_META } from '@/lib/notifications-data';
 import { Reveal, ScrollProgress, Parallax, Counter, Tilt, Wave } from '@/app/components/Animate';
+import { FillKaroIcon, FillKaroWordmark } from '@/app/components/Logo';
 
 const DOC_LABELS: Record<string, { label: string; icon: string }> = {
   aadhaar:                { label: 'Aadhaar Card',           icon: '🪪' },
@@ -370,9 +371,9 @@ export default function HomePage() {
 
       {/* ═══ NAVBAR ═══ */}
       <nav className="gf-nav">
-        <div className="gf-logo">
-          <div className="gf-logo-mark">⚡</div>
-          GovForm<em>AI</em>
+        <div className="gf-logo" style={{ gap: 10 }}>
+          <FillKaroIcon size={34} />
+          <FillKaroWordmark size={20} />
         </div>
         <div className="gf-nav-links">
           <a className="gf-nav-link" href="#find">Find Exam</a>
@@ -803,7 +804,7 @@ export default function HomePage() {
       {/* ═══ WHY GOVFORM ═══ */}
       <Reveal as="section" variant="reveal" className="gf-section" id="why">
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <h2 className="gf-section-title">Why <span className="accent">GovForm AI?</span></h2>
+          <h2 className="gf-section-title">Why <span className="accent">FillKaro?</span></h2>
           <p className="gf-section-sub" style={{ marginTop: 8 }}>Har student ki form-bharne ki tension khatam</p>
         </div>
         <div className="gf-why-grid reveal-stagger in">
@@ -871,8 +872,9 @@ export default function HomePage() {
       <footer className="gf-bigfooter">
         <div className="gf-foot-grid">
           <div className="gf-foot-col">
-            <div className="gf-logo" style={{ fontSize: 22, marginBottom: 14 }}>
-              <div className="gf-logo-mark">⚡</div>GovForm<em>AI</em>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <FillKaroIcon size={38} />
+              <FillKaroWordmark size={22} />
             </div>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 18, maxWidth: 280 }}>
               India ka pehla AI form-filler. Sarkari exam forms 5 minute me — captcha, photo, signature sab automatic.
@@ -897,7 +899,7 @@ export default function HomePage() {
             <a className="gf-foot-link" href="#how">Kaise Kaam Karta Hai</a>
             <a className="gf-foot-link" href="#alerts">Job Alerts</a>
             <a className="gf-foot-link" href="#results">Results</a>
-            <a className="gf-foot-link" href="#why">Why GovForm</a>
+            <a className="gf-foot-link" href="#why">Why FillKaro</a>
           </div>
 
           <div className="gf-foot-col">
@@ -913,7 +915,7 @@ export default function HomePage() {
         </div>
 
         <div className="gf-foot-bottom">
-          <span style={{ fontSize: 12, color: 'var(--text3)' }}>© 2025 GovForm AI · Made in India 🇮🇳 · Powered by Claude</span>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>© 2025 FillKaro · Made in India 🇮🇳 · Powered by Claude</span>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {['🔒 Secure', '⚡ Claude AI', '🎯 98% Accurate'].map((t, i) => (
               <span key={i} style={{ fontSize: 12, color: 'var(--text2)' }}>{t}</span>

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { FillKaroIcon, FillKaroWordmark } from '@/app/components/Logo';
 import { EXAMS_WITH_POSTS, DOC_LABELS, ExamWithPosts, Post } from '@/lib/posts-data';
 import CenterSelector from '@/app/components/CenterSelector';
 import { UPSC_CENTERS } from '@/lib/upsc-centers';
@@ -869,10 +870,11 @@ export default function SSCPage() {
       <div className="border-b px-4 py-0 flex items-center gap-3 sticky top-0 z-20"
         style={{ background: 'rgba(6,8,7,0.85)', backdropFilter: 'blur(20px)', borderColor: 'rgba(120,220,170,0.12)', minHeight: 56 }}>
         {/* Logo */}
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg,#00DC82,#00A865)', boxShadow: '0 0 12px rgba(0,220,130,0.4)' }}>🤖</div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <FillKaroIcon size={32} />
+          <FillKaroWordmark size={17} />
+        </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-white font-bold text-sm leading-tight">GovForm AI</h1>
           <p className="text-gray-500 leading-tight" style={{ fontSize: 10 }}>Auto-Fill Assistant</p>
         </div>
         <div className="flex items-center gap-2 ml-auto">

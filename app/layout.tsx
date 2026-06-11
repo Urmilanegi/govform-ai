@@ -5,8 +5,8 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GovForm AI",
-  description: "Sarkari Form Auto-Filler · Powered by Claude AI",
+  title: "FillKaro — AI Form Filler",
+  description: "Sarkari forms 5 minute mein — SSC, Railway, UPSC, Banking. AI sab kuch automatic bharega.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
