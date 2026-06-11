@@ -3,7 +3,57 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { EXAMS_WITH_POSTS, DOC_LABELS, ExamWithPosts, Post } from '@/lib/posts-data';
 import CenterSelector from '@/app/components/CenterSelector';
 import { UPSC_CENTERS } from '@/lib/upsc-centers';
+import { Reveal, ScrollProgress, Wave, Counter, Tilt } from '@/app/components/Animate';
 type Center = typeof UPSC_CENTERS[0];
+
+type FindExam = { name: string; status: string; icon: string };
+const FIND_TABS: { id: string; label: string; exams: FindExam[] }[] = [
+  { id: 'upcoming', label: 'Upcoming', exams: [
+    { name: 'DSSSB TGT Science', status: 'To be Announced', icon: '🧪' },
+    { name: 'UP Home Guards 2025', status: 'To be Announced', icon: '🛡️' },
+    { name: 'BSSC Inter Level 2025', status: 'To be Announced', icon: '📋' },
+    { name: 'RRB NTPC 10+2 Level 2025', status: 'To be Announced', icon: '🚆' },
+    { name: 'Navodaya Vidyalaya Class 11th', status: '07 Feb 2026', icon: '🏫' },
+    { name: 'RRB NTPC Graduate Level 2025', status: 'To be Announced', icon: '🚆' },
+    { name: 'Rajasthan Police SI', status: 'To be Announced', icon: '🚔' },
+    { name: 'BSSC Bihar CGL 2025', status: 'To be Announced', icon: '📜' },
+    { name: 'Airforce AFCAT 01/2026', status: '31 Jan 2026', icon: '✈️' },
+  ]},
+  { id: 'ssc', label: 'SSC', exams: [
+    { name: 'SSC CGL 2026', status: 'Live Now', icon: '🏛️' },
+    { name: 'SSC CHSL 2026', status: 'To be Announced', icon: '📝' },
+    { name: 'SSC MTS 2026', status: 'To be Announced', icon: '✏️' },
+    { name: 'SSC GD Constable', status: 'To be Announced', icon: '🪖' },
+    { name: 'SSC CPO SI Tier-I', status: '09–12 Dec 2025', icon: '🚓' },
+    { name: 'SSC JE 2026', status: 'To be Announced', icon: '🔧' },
+  ]},
+  { id: 'railways', label: 'Railways', exams: [
+    { name: 'RRB NTPC Graduate', status: 'To be Announced', icon: '🚆' },
+    { name: 'RRB ALP 2025', status: 'To be Announced', icon: '🚄' },
+    { name: 'RRB Group D', status: 'To be Announced', icon: '🛤️' },
+    { name: 'RRB JE 2025', status: 'To be Announced', icon: '🔧' },
+    { name: 'RRB RPF Constable', status: 'To be Announced', icon: '🚔' },
+  ]},
+  { id: 'banking', label: 'Banking & Insurance', exams: [
+    { name: 'SBI PO 2026', status: 'To be Announced', icon: '🏦' },
+    { name: 'SBI Clerk 2026', status: 'To be Announced', icon: '💰' },
+    { name: 'IBPS PO 2026', status: 'To be Announced', icon: '🏦' },
+    { name: 'IBPS Clerk 2026', status: 'To be Announced', icon: '🧾' },
+    { name: 'RBI Grade B', status: 'To be Announced', icon: '🏛️' },
+  ]},
+  { id: 'defence', label: 'Defence', exams: [
+    { name: 'Army Agniveer', status: 'To be Announced', icon: '🪖' },
+    { name: 'Navy Agniveer', status: 'To be Announced', icon: '⚓' },
+    { name: 'Airforce AFCAT 01/2026', status: '31 Jan 2026', icon: '✈️' },
+    { name: 'UPSC CDS', status: 'To be Announced', icon: '🎖️' },
+  ]},
+  { id: 'upsc', label: 'UPSC', exams: [
+    { name: 'UPSC IAS 2026', status: 'To be Announced', icon: '🏅' },
+    { name: 'UPSC CAPF', status: 'To be Announced', icon: '🛡️' },
+    { name: 'UPSC NDA', status: 'To be Announced', icon: '🪂' },
+    { name: 'UPSC CDS', status: 'To be Announced', icon: '🎖️' },
+  ]},
+];
 
 // ── Types ──────────────────────────────────────────────────────────
 type ChatRole = 'bot' | 'user';
@@ -317,6 +367,8 @@ export default function SSCPage() {
   const [saved, setSaved]           = useState(false);
   const [detailsInput, setDetailsInput] = useState({ mother: '', mobile: '', email: '', aadhaar: '', mark: 'Mole on right hand' });
   const [selectedCenters, setSelectedCenters] = useState<Center[]>([]);
+  const [findTab, setFindTab]   = useState('upcoming');
+  const [findSearch, setFindSearch] = useState('');
   const [ssoId, setSsoId]     = useState('');
   const [ssoPass, setSsoPass] = useState('');
   const [ssoInput, setSsoInput] = useState({ id: '', pass: '' });
@@ -678,6 +730,20 @@ export default function SSCPage() {
   };
 
   // ── Flow handlers ──────────────────────────────────────────────
+  const chatRef = useRef<HTMLDivElement>(null);
+  const detectFromName = (name: string) => {
+    const norm = name.toLowerCase();
+    const found = EXAMS_WITH_POSTS.find(e =>
+      e.shortName.toLowerCase().includes(norm) ||
+      e.name.toLowerCase().includes(norm) ||
+      norm.includes(e.shortName.toLowerCase())
+    );
+    if (found) {
+      chatRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => handleExamSelect(found), 400);
+    }
+  };
+
   const handleExamSelect = (ex: ExamWithPosts) => {
     setExam(ex);
     addMsg('user', ex.shortName);
@@ -863,6 +929,88 @@ export default function SSCPage() {
   });
 
   return (
+    <>
+    <ScrollProgress />
+
+    {/* ═══ NAVBAR ═══ */}
+    <nav className="gf-nav">
+      <div className="gf-logo"><div className="gf-logo-mark">⚡</div>GovForm<em>AI</em></div>
+      <div className="gf-nav-links">
+        <a className="gf-nav-link" href="#find">Find Exam</a>
+        <a className="gf-nav-link" href="#chat">Form Bharo</a>
+        <a className="gf-nav-link" href="/">Home</a>
+        <span className="gf-nav-cta" style={{ cursor: 'default' }}>
+          <span className="live-dot green" />SSC LIVE
+        </span>
+      </div>
+    </nav>
+
+    {/* ═══ STATS STRIP ═══ */}
+    <Reveal variant="reveal-zoom" as="div" className="gf-stats">
+      <div className="gf-stat"><div className="gf-stat-num"><Counter to={50} suffix="K+" /></div><div className="gf-stat-label">Forms Filled</div></div>
+      <div className="gf-stat"><div className="gf-stat-num"><Counter to={98} suffix="%" /></div><div className="gf-stat-label">Accuracy</div></div>
+      <div className="gf-stat"><div className="gf-stat-num"><Counter to={5} suffix=" Min" /></div><div className="gf-stat-label">Avg Time</div></div>
+      <div className="gf-stat"><div className="gf-stat-num"><Counter to={50} prefix="₹" /></div><div className="gf-stat-label">Per Form</div></div>
+    </Reveal>
+
+    {/* ═══ MARQUEE ═══ */}
+    <div className="gf-marquee">
+      <div className="gf-marquee-track">
+        {[...Array(2)].flatMap((_, k) =>
+          ['SSC CGL','Railway NTPC','IBPS PO','UPSC IAS','SBI Clerk','Army Agniveer','UP Police','CTET','RPSC RAS']
+            .map((t, i) => <span key={`${k}-${i}`} className="gf-marquee-item">{t}</span>)
+        )}
+      </div>
+    </div>
+
+    <Wave />
+
+    {/* ═══ FIND MY EXAM ═══ */}
+    <Reveal as="section" variant="reveal" className="gf-section" id="find">
+      <div style={{ textAlign:'center', marginBottom:28 }}>
+        <h2 className="gf-section-title">Find <span className="accent">My Exam</span></h2>
+        <p className="gf-section-sub" style={{ marginTop:8 }}>Apna exam dhundo — ek click me AI form bhar dega</p>
+      </div>
+      <div className="gf-find-search">
+        <input value={findSearch} onChange={e => setFindSearch(e.target.value)}
+          onKeyDown={e => e.key==='Enter' && findSearch.trim() && detectFromName(findSearch)}
+          placeholder="🔍  Search Exams — SSC CGL, Railway NTPC, IBPS PO..." />
+        <button onClick={() => findSearch.trim() && detectFromName(findSearch)}>Search</button>
+      </div>
+      <div className="gf-find-tabs hide-scroll">
+        {FIND_TABS.map(t => (
+          <button key={t.id} className={`gf-find-tab ${findTab===t.id?'on':''}`} onClick={() => setFindTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="gf-find-grid reveal-stagger in" key={findTab}>
+        {(FIND_TABS.find(t=>t.id===findTab)?.exams||[]).map((ex,i) => {
+          const isLive = /live/i.test(ex.status);
+          const hasDate = /\d/.test(ex.status);
+          return (
+            <div key={i} className="gf-exam-card" onClick={() => detectFromName(ex.name)}>
+              <div className="gf-exam-card-icon">{ex.icon}</div>
+              <div style={{ minWidth:0 }}>
+                <div className="gf-exam-card-name">{ex.name}</div>
+                <div className="gf-exam-card-status" style={{ color: isLive?'var(--emerald)':hasDate?'var(--champagne)':'var(--text3)' }}>
+                  {isLive && <span className="live-dot green" style={{ display:'inline-block',marginRight:6,verticalAlign:'middle' }} />}
+                  {ex.status}
+                </div>
+              </div>
+              <div className="gf-exam-card-arrow">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Reveal>
+
+    <Wave flip />
+
+    {/* ═══ CHAT / FORM FILL ═══ */}
+    <div ref={chatRef} id="chat" />
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #060807 0%, #08120d 55%, #050706 100%)' }}>
 
       {/* Header */}
@@ -1618,5 +1766,6 @@ export default function SSCPage() {
         <div ref={bottomRef} />
       </div>
     </div>
+    </>
   );
 }
