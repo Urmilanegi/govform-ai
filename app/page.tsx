@@ -801,25 +801,38 @@ export default function HomePage() {
 
       <Wave flip />
 
-      {/* ═══ WHY GOVFORM ═══ */}
+      {/* ═══ WHY FILLKARO ═══ */}
       <Reveal as="section" variant="reveal" className="gf-section" id="why">
-        <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <h2 className="gf-section-title">Why <span className="accent">FillKaro?</span></h2>
-          <p className="gf-section-sub" style={{ marginTop: 8 }}>Har student ki form-bharne ki tension khatam</p>
-        </div>
-        <div className="gf-why-grid reveal-stagger in">
-          {[
-            { icon: '🤖', title: 'AI Auto-Fill', desc: 'Captcha, dropdowns, photo, signature — AI sab khud bharega. Tum bas dekho.', bg: 'rgba(0,220,130,0.1)', ic: 'linear-gradient(135deg,#00DC82,#00A865)' },
-            { icon: '⚡', title: '5 Minute Mein', desc: 'Ghanton ka kaam minute me. Time bachao, tension chhodo.', bg: 'rgba(232,194,104,0.08)', ic: 'linear-gradient(135deg,#E8C268,#C9A14E)' },
-            { icon: '🎯', title: '98% Accuracy', desc: 'Claude AI document se exact data nikaalta hai — galti ki gunjaish nahi.', bg: 'rgba(124,245,200,0.08)', ic: 'linear-gradient(135deg,#7CF5C8,#00DC82)' },
-            { icon: '🔒', title: '100% Secure', desc: 'Data 24hr me delete. No account, no spam — sirf form, bas.', bg: 'rgba(0,160,110,0.08)', ic: 'linear-gradient(135deg,#00A865,#007A4D)' },
-          ].map((c, i) => (
-            <Tilt key={i} max={8} className="gf-why-card" style={{ background: c.bg }}>
-              <div className="gf-why-icon" style={{ background: c.ic }}>{c.icon}</div>
-              <div className="gf-why-title">{c.title}</div>
-              <div className="gf-why-desc">{c.desc}</div>
-            </Tilt>
-          ))}
+        <div className="gf-why-wrap">
+          {/* Left — text */}
+          <div className="gf-why-left">
+            <div className="gf-why-left-logo">
+              <FillKaroIcon size={36} />
+            </div>
+            <h2>Why <span className="accent">FillKaro?</span></h2>
+            <p>
+              1.8 lakh+ students ke sath aur India ke <strong style={{ color: 'var(--text1)' }}>sabse accurate form-filler</strong> hone ke saath, tum hum par bharosa kar sakte ho — har sarkari exam mein.
+            </p>
+            <a href="/ssc" className="gf-btn" style={{ display: 'inline-flex', maxWidth: 260 }}>
+              Abhi Free Try Karo →
+            </a>
+          </div>
+
+          {/* Right — 2×2 card grid */}
+          <div className="gf-why-grid reveal-stagger in">
+            {[
+              { icon: '🤖', title: 'AI Auto-Fill', desc: 'Captcha, dropdowns, photo, signature — AI sab khud bharega. Tum bas dekho.', bg: 'rgba(0,220,130,0.08)', ic: 'linear-gradient(135deg,#00DC82,#00A865)' },
+              { icon: '⚡', title: '5 Minute Mein', desc: 'Ghanton ka kaam minute me. Time bachao, tension bilkul chhodo.', bg: 'rgba(232,194,104,0.07)', ic: 'linear-gradient(135deg,#E8C268,#C9A14E)' },
+              { icon: '🎯', title: '98% Accuracy', desc: 'Claude AI document se exact data nikaalta hai — galti ki gunjaish nahi.', bg: 'rgba(124,245,200,0.07)', ic: 'linear-gradient(135deg,#7CF5C8,#00DC82)' },
+              { icon: '🔒', title: '100% Secure', desc: 'Data 24hr me delete. No account, no spam — sirf form, bas.', bg: 'rgba(100,120,255,0.07)', ic: 'linear-gradient(135deg,#818cf8,#6366f1)' },
+            ].map((c, i) => (
+              <Tilt key={i} max={6} className="gf-why-card" style={{ background: c.bg }}>
+                <div className="gf-why-icon" style={{ background: c.ic }}>{c.icon}</div>
+                <div className="gf-why-title">{c.title}</div>
+                <div className="gf-why-desc">{c.desc}</div>
+              </Tilt>
+            ))}
+          </div>
         </div>
       </Reveal>
 
