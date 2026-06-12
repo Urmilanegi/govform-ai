@@ -346,22 +346,23 @@ export default function HomePage() {
 
   if (isProcessing) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg,#060807 0%,#08120d 55%,#050706 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 20px' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Bot bubble */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00DC82,#00A865)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🤖</div>
-            <div style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0 18px 18px 18px', padding: '14px 18px', maxWidth: '85%' }}>
-              <p style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Documents padh raha hoon...</p>
-              <p style={{ color: '#00DC82', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{processingStep}</p>
-              <p style={{ color: '#6b7280', fontSize: 11, marginBottom: 10 }}>30–60 seconds lagenge</p>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
-                ))}
-              </div>
-            </div>
+      <div className="processing-screen">
+        {/* Chat bubble dots — robot orb ki jagah */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00DC82,#00A865)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🤖</div>
+          <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 18px 4px', padding: '14px 20px', display: 'flex', gap: 7, alignItems: 'center' }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+            ))}
           </div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text1)', marginBottom: 8, letterSpacing: '-0.5px' }}>AI Kaam Kar Raha Hai</h2>
+          <p style={{ fontSize: 15, color: 'var(--emerald)', fontWeight: 700, marginBottom: 4 }}>{processingStep}</p>
+          <p style={{ fontSize: 12, color: 'var(--text3)' }}>30–60 seconds lagenge...</p>
+        </div>
+        <div className="progress-dots">
+          <span /><span /><span /><span />
         </div>
         <style>{`@keyframes botDot { 0%,80%,100%{opacity:0.25;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.15)} }`}</style>
       </div>
