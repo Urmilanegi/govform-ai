@@ -326,6 +326,8 @@ export default function SSCPage() {
   });
   const bottomRef = useRef<HTMLDivElement>(null);
   let msgId = useRef(0);
+  // OTR question ke baad chalane wale fill ke args yahan hold hote hain
+  const pendingFillRef = useRef<Parameters<typeof startFill> | null>(null);
 
   // Auto-refresh screenshot every 2s whenever OTP/captcha box is visible
   useEffect(() => {
@@ -414,14 +416,17 @@ export default function SSCPage() {
       if (found) setExam(found);
       let p: Record<string, string> = {};
       try { p = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
+      pendingFillRef.current = [
+        examId,
+        p.mother || '', p.mobile || '', p.email || '', p.aadhaar || '',
+        p.visibleMark || 'Mole on right hand', p.photoPath || '', p.signPath || '',
+      ];
       setTimeout(() => {
-        addMsg('bot', '🤖 Documents se saari details mil gayi! Ab main background mein official site pe form bhar raha hoon...');
-        setStep(6);
-        startFill(
-          examId,
-          p.mother || '', p.mobile || '', p.email || '', p.aadhaar || '',
-          p.visibleMark || 'Mole on right hand', p.photoPath || '', p.signPath || ''
-        );
+        addMsg('bot', '🤖 Documents se saari details mil gayi!');
+        setTimeout(() => {
+          addMsg('bot', '🪪 Ek baat batao — kya tumhara SSC ka OTR (One Time Registration) pehle se bana hua hai?');
+          setStep(28);
+        }, 600);
       }, 400);
       return;
     }
@@ -902,11 +907,23 @@ export default function SSCPage() {
     }
 
     addMsg('user', savedMode ? 'Haan, saved details se start karo!' : 'Haan, start karo!');
+    pendingFillRef.current = [exam?.id || 'ssc-cgl', mother, mobile, email, aadhaar, visibleMark, photoPath, signPath, selectedCenters];
     setTimeout(() => {
-      const portalName = exam?.name || 'portal';
-      addMsg('bot', `🤖 Theek hai! Browser kholke ${portalName} site pe ja raha hoon...`);
+      addMsg('bot', '🪪 Ek baat batao — kya tumhara SSC ka OTR (One Time Registration) pehle se bana hua hai?');
+      setStep(28);
+    }, 300);
+  };
+
+  // OTR question ka jawab → fill shuru
+  const answerOtr = (hasOtr: boolean) => {
+    addMsg('user', hasOtr ? '✅ Haan, OTR bana hai' : '❌ Nahi bana / pata nahi');
+    setTimeout(() => {
+      addMsg('bot', hasOtr
+        ? '🔐 Badhiya! Login karke seedha application form bhar raha hoon...'
+        : '📝 Koi baat nahi! Pehle tumhara OTR complete karunga — jo bhi details missing hain (DOB verify, qualification, mobile, email) sab bhar dunga. Phir application form. Sab automatic — CAPTCHA/OTP aaye toh yahin dikhega.');
       setStep(6);
-      startFill(exam?.id || 'ssc-cgl', mother, mobile, email, aadhaar, visibleMark, photoPath, signPath, selectedCenters);
+      const args = pendingFillRef.current;
+      if (args) startFill(...args);
     }, 300);
   };
 
@@ -1004,6 +1021,19 @@ export default function SSCPage() {
                 <ExamLogo exam={ex.id} size={22} /> {ex.shortName}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* ── Step 28: OTR question ── */}
+        {step === 28 && (
+          <div className="pl-11 flex gap-2 flex-wrap">
+            <button onClick={() => answerOtr(true)}
+              style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00D4FF,#0891B2)', border: 'none', color: 'white' }}>
+              ✅ Haan, OTR bana hai
+            </button>
+            <button onClick={() => answerOtr(false)} style={chipStyle()}>
+              ❌ Nahi bana / pata nahi
+            </button>
           </div>
         )}
 

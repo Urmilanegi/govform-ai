@@ -2162,6 +2162,67 @@ async function setInputValue(page, selector, value) {
     }
 
     if (!dashboardData.otrDone) {
+    // ── STEP 2.5: OTR PERSONAL DETAILS (naye users ke missing fields) ──
+    send('progress', '🌐 OTR Personal Details check kar raha hoon...');
+    await page.goto('https://ssc.gov.in/candidate-portal/one-time-registration/personal-details', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(2500);
+    if (page.url().includes('one-time-registration/personal-details')) {
+      send('progress', '📋 Personal Details page — missing fields bhar raha hoon...');
+      const dobDash = (student.dob || '').replace(/\//g, '-');
+
+      // Label dhoondh ke uske paas wala KHALI input bharo
+      const fillByLabel = async (labelRe, value, name) => {
+        if (!value) { send('progress', `⚠️ ${name}: value hi nahi hai`); return; }
+        const ok = await page.evaluate(({ re, val }) => {
+          const rx = new RegExp(re, 'i');
+          const all = Array.from(document.querySelectorAll('label, .label, p, span, b, div'));
+          for (const lbl of all) {
+            const t = (lbl.textContent || '').trim();
+            if (!rx.test(t) || t.length > 90) continue;
+            let scope = lbl.closest('div');
+            for (let hop = 0; hop < 4 && scope; hop++) {
+              const inp = scope.querySelector('input:not([type=radio]):not([type=checkbox]):not([disabled])');
+              if (inp && !inp.value) {
+                const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                inp.focus(); s.call(inp, val);
+                ['input','change','blur'].forEach(ev => inp.dispatchEvent(new Event(ev, { bubbles: true })));
+                return true;
+              }
+              scope = scope.parentElement;
+            }
+          }
+          return false;
+        }, { re: labelRe, val: value });
+        send('progress', ok ? `✅ ${name}: ${value}` : `⚠️ ${name} field nahi mila / pehle se bhara hai`);
+      };
+
+      await fillByLabel('verify\\s*date\\s*of\\s*birth', dobDash, 'Verify DOB');
+      await fillByLabel("candidate'?s?\\s*mobile\\s*number|^\\s*\\d*\\.?\\s*mobile\\s*number", student.mobile, 'Mobile Number');
+      await fillByLabel("candidate'?s?\\s*email|^\\s*\\d*\\.?\\s*email\\s*id", student.email, 'Email ID');
+
+      // Highest qualification dropdowns
+      const hq = process.env.HIGHEST_QUAL ||
+        (process.env.QUAL_DEGREE || process.env.QUAL_YEAR ? 'Graduation and above' : 'Graduation and above');
+      const hqOk = await pickDropdown(page, 'Highest Level of Education', hq);
+      await page.waitForTimeout(700);
+      send('progress', hqOk !== false ? `✅ Highest Qualification: ${hq}` : '⚠️ Highest Qualification dropdown nahi mila');
+      await pickDropdown(page, 'Verify Highest Level', hq);
+      await page.waitForTimeout(700);
+      send('progress', `✅ Verify Highest Qualification: ${hq}`);
+
+      // Save & Next
+      const saved = await page.evaluate(() => {
+        const btns = Array.from(document.querySelectorAll('button, input[type=submit], a'));
+        const b = btns.find(x => /save\s*&?\s*next|save\s*and\s*next/i.test(x.textContent || x.value || ''));
+        if (b) { b.click(); return true; }
+        return false;
+      });
+      send('progress', saved ? '💾 Personal Details — Save & Next' : '⚠️ Save & Next button nahi mila');
+      await page.waitForTimeout(3500);
+    } else {
+      send('progress', '✅ Personal Details pehle se complete hai');
+    }
+
     // ── NAVIGATE TO OTR ───────────────────────────────────────
     send('progress', '🌐 OTR form fill karne ja raha hoon...');
     await page.goto('https://ssc.gov.in/candidate-portal/one-time-registration/additional-details', { waitUntil: 'domcontentloaded', timeout: 30000 });
