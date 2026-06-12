@@ -163,9 +163,39 @@ export function FormLogo({ size = 44 }: LogoProps) {
   );
 }
 
-// ── Resolver: id/name → badge ──
+// ── Real downloaded logos (public/logos/*.webp) — pehle ye check hote hain ──
+function realLogoFor(e: string): string | null {
+  if (e.includes('rbi')) return '/logos/rbi.webp';
+  if (e.includes('sbi')) return '/logos/sbi.webp';
+  if (e.includes('ibps') || e.includes('bank') || e.includes('insurance') || e.includes('lic') || e.includes('nabard')) return '/logos/ibps.webp';
+  if (e.includes('dsssb')) return '/logos/dsssb.webp';
+  if (e.includes('police') || e.includes('rpf') || e.includes(' si')) return '/logos/police.webp';
+  if (e.includes('upsc') || e.includes('ias') || e.includes('ips') || e.includes('ifs') || e.includes('irs') || e.includes('cse') || e.includes('capf')) return '/logos/upsc.webp';
+  if (e.includes('rrb') || e.includes('railway') || e.includes('ntpc') || e.includes('alp') || e.includes('group d') || e.includes('group-d')) return '/logos/railway.webp';
+  if (e.includes('ssc') || e.includes('cgl') || e.includes('chsl') || e.includes('mts') || e.includes('cpo') || e.includes('steno')) return '/logos/ssc.webp';
+  return null;
+}
+
+function RealLogo({ src, size }: { src: string; size: number }) {
+  return (
+    <span style={{
+      width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      background: '#fff',
+      border: '1.5px solid rgba(0,212,255,0.35)',
+      boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 4px 12px rgba(0,0,0,0.45)',
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" width={size - 6} height={size - 6} style={{ objectFit: 'contain' }} />
+    </span>
+  );
+}
+
+// ── Resolver: id/name → real logo, warna SVG badge ──
 export function ExamLogo({ exam, size = 44 }: { exam: string; size?: number }) {
   const e = exam.toLowerCase();
+  const real = realLogoFor(e);
+  if (real) return <RealLogo src={real} size={size} />;
   if (e.includes('navy') || e.includes('ina')) return <NavyLogo size={size} />;
   if (e.includes('air') || e.includes('afcat') || e.includes('afa') || e.includes('iaf')) return <AirForceLogo size={size} />;
   if (e.includes('army') || e.includes('agniveer') || e.includes('nda') || e.includes('cds') || e.includes('defence') || e.includes('ima') || e.includes('ota') || e.includes('capf')) return <ArmyLogo size={size} />;
