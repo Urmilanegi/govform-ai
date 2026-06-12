@@ -191,6 +191,7 @@ export default function HomePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [docError, setDocError] = useState(false);
   const [filledForms, setFilledForms] = useState<{ exam: string; date: string }[]>([]);
 
   // Load filled-forms history when drawer opens
@@ -346,6 +347,7 @@ export default function HomePage() {
   };
 
   const requiredDocSet = new Set(selectedPost?.requiredDocs || []);
+  const missingReqDocs = [...requiredDocSet].filter(d => !uploadedDocs.find(u => u.type === d));
   const displayDocTypes = selectedPost
     ? [...selectedPost.requiredDocs, ...selectedPost.optionalDocs, 'other']
     : ALL_DOC_TYPES.concat(['other']);
@@ -396,10 +398,6 @@ export default function HomePage() {
           <span className="gf-nav-link" onClick={scrollToFlow}>Form Bharo</span>
           <a className="gf-nav-link" href="#alerts">Job Alerts</a>
           <a className="gf-nav-link" href="#how">Kaise Kaam Karta Hai</a>
-          <a className="gf-nav-cta" href="/ssc">
-            <span className="live-dot" style={{ background: '#02101A', boxShadow: 'none' }} />
-            SSC LIVE
-          </a>
           <button className="gf-burger" aria-label="Menu" onClick={() => setDrawerOpen(true)}>
             <span /><span /><span />
           </button>
@@ -818,8 +816,28 @@ export default function HomePage() {
                     onChange={e => { handleFileSelect(e.target.files, activeDocType); e.target.value = ''; }} />
 
                   <div style={{ padding: '18px 24px 22px' }}>
-                    <button onClick={() => setStep(4)} className="gf-btn">
-                      {mounted && uploadedDocs.length > 0 ? `✓ ${uploadedDocs.length} Docs Ready — Aage Badho` : 'Skip Karo → Bina Docs Ke'}
+                    {/* HARD GATE — required docs ke bina aage nahi */}
+                    {docError && missingReqDocs.length > 0 && (
+                      <div style={{ marginBottom: 14, padding: '14px 16px', borderRadius: 14, background: 'rgba(255,107,107,0.08)', border: '1.5px solid rgba(255,107,107,0.4)' }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: '#FF8B8B', marginBottom: 8 }}>⚠️ Ye documents zaroori hain — bina inke aage nahi badh sakte:</p>
+                        {missingReqDocs.map(d => (
+                          <p key={d} style={{ fontSize: 12, color: '#FCA5A5', padding: '3px 0' }}>
+                            {(DOC_LABELS[d] || { icon: '📎', label: d }).icon} {(DOC_LABELS[d] || { label: d }).label} <span style={{ fontWeight: 800 }}>← upload karo</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (missingReqDocs.length > 0) { setDocError(true); return; }
+                        setDocError(false);
+                        setStep(4);
+                      }}
+                      className="gf-btn"
+                      style={missingReqDocs.length > 0 ? { opacity: 0.55, filter: 'grayscale(0.4)' } : {}}>
+                      {mounted && missingReqDocs.length === 0
+                        ? `✓ Sab Required Docs Ready — Aage Badho`
+                        : `🔒 ${missingReqDocs.length} Required Document baaki — Pehle Upload Karo`}
                     </button>
                   </div>
                 </div>
