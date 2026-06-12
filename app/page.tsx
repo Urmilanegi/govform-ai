@@ -300,7 +300,7 @@ export default function HomePage() {
       for (const doc of uploadedDocs) formData.append(`doc_${doc.type}`, doc.file);
       const parseRes = await fetch('/api/parse-documents', { method: 'POST', body: formData });
       const parseData = await parseRes.json();
-      if (!parseData.success) throw new Error(parseData.error || 'Parse failed');
+      if (!parseData.success) throw new Error(parseData.error || parseData.details || 'Parse failed');
 
       setProcessingStep('✍️ Form fill kar raha hoon...');
       const fillRes = await fetch('/api/fill-form', {

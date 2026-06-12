@@ -168,7 +168,14 @@ async function normalizeImageForVision(bytes: Buffer, mimeType: string, fileName
       return normalizeImageForVision(convertedBuffer, 'image/jpeg', fileName.replace(/\.(heic|heif)$/i, '.jpg'));
     }
 
-    throw error;
+    if (isHeicFile) {
+      // Render (Linux) pe sips nahi hai aur sharp HEIC decode nahi karta
+      throw new Error(
+        `iPhone ki HEIC photo "${fileName}" supported nahi hai. Photo ko JPG mein bhejo — iPhone pe Settings > Camera > Formats > "Most Compatible" karo, ya photo ka screenshot leke upload karo.`
+      );
+    }
+
+    throw new Error(`Image "${fileName}" process nahi ho paayi — file corrupt ya unsupported format hai. JPG/PNG try karo.`);
   }
 }
 
@@ -373,8 +380,10 @@ IMPORTANT:
     });
   } catch (error) {
     console.error('Parse error:', error);
+    // Real reason user ko dikhao — generic message debugging impossible bana deta hai
+    const message = error instanceof Error ? error.message : 'Failed to parse documents';
     return NextResponse.json(
-      { success: false, error: 'Failed to parse documents', details: String(error) },
+      { success: false, error: message, details: String(error) },
       { status: 500 }
     );
   }
