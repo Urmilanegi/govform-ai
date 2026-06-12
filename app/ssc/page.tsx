@@ -489,6 +489,13 @@ export default function SSCPage() {
     setDone(false);
     setFinalScreen(null);
     setActiveExamId(examId);
+    // Track which milestones have been announced in chat
+    const announced = new Set<string>();
+    const milestoneMsg = (key: string, msg: string) => {
+      if (announced.has(key)) return;
+      announced.add(key);
+      addMsg('bot', msg);
+    };
 
     const apiRoute = getApiRoute(examId);
 
@@ -536,6 +543,25 @@ export default function SSCPage() {
       try {
         const data: LogEntry = JSON.parse(e.data);
         setLogs(prev => [...prev, data]);
+
+        // ── Milestone chat bubbles ──
+        const m = (data.message || '').toLowerCase();
+        if (data.type === 'progress' || data.type === 'log') {
+          if (/login.*success|logged.?in|login ho gaya/i.test(data.message))
+            milestoneMsg('login', '✅ Login ho gaya!');
+          else if (/personal|name.*fill|filling.*name|father|mother.*fill/i.test(data.message))
+            milestoneMsg('personal', '👤 Personal details fill ho rahi hain...');
+          else if (/education|qualification|10th|12th|graduation|matric/i.test(data.message))
+            milestoneMsg('education', '🎓 Education details fill ho rahi hain...');
+          else if (/photo|signature|upload/i.test(data.message))
+            milestoneMsg('upload', '📷 Photo aur Signature upload ho raha hai...');
+          else if (/declaration|preview|checkbox/i.test(data.message))
+            milestoneMsg('declaration', '📜 Declaration submit ho rahi hai...');
+        }
+        if (data.type === 'error')
+          milestoneMsg('error_' + m.slice(0, 30), `❌ Error: ${data.message}`);
+        if (data.type === 'done')
+          milestoneMsg('done', '🎉 Form successfully submit ho gaya!');
 
         if (data.type === 'captcha') {
           const text = data.captchaText || '';
@@ -804,8 +830,27 @@ export default function SSCPage() {
     }, 300);
   };
 
-  const handleStart = () => {
-    addMsg('user', 'Haan, start karo!');
+  const checkDocsAndStart = (savedMode: boolean) => {
+    const missingDocs: string[] = [];
+    if (!photoPath) missingDocs.push('📷 Passport Photo');
+    if (!signPath)  missingDocs.push('✍️ Signature');
+    if (!mobile)    missingDocs.push('📱 Mobile Number');
+    if (!email)     missingDocs.push('📧 Email ID');
+
+    if (missingDocs.length > 0) {
+      addMsg('user', savedMode ? 'Haan, saved details se start karo!' : 'Haan, start karo!');
+      setTimeout(() => {
+        addMsg('bot', `⚠️ Ruko! Yeh required cheezein missing hain:\n${missingDocs.join('\n')}\n\nIn bina form submit nahi hoga. Pehle upload karo.`);
+        setStep(3);
+      }, 300);
+      return;
+    }
+
+    if (savedMode) {
+      addMsg('user', 'Haan, saved details se start karo!');
+    } else {
+      addMsg('user', 'Haan, start karo!');
+    }
     setTimeout(() => {
       const portalName = exam?.name || 'portal';
       addMsg('bot', `🤖 Theek hai! Browser kholke ${portalName} site pe ja raha hoon...`);
@@ -814,15 +859,8 @@ export default function SSCPage() {
     }, 300);
   };
 
-  const handleSavedStart = () => {
-    addMsg('user', 'Haan, saved details se start karo!');
-    setTimeout(() => {
-      const portalName = exam?.name || 'portal';
-      addMsg('bot', `🤖 Theek hai! Saved details se ${portalName} form fill kar raha hoon...`);
-      setStep(6);
-      startFill(exam?.id || 'ssc-cgl', mother, mobile, email, aadhaar, visibleMark, photoPath, signPath, selectedCenters);
-    }, 300);
-  };
+  const handleStart = () => checkDocsAndStart(false);
+  const handleSavedStart = () => checkDocsAndStart(true);
 
   // ── Render ─────────────────────────────────────────────────────
   const inputStyle = {
