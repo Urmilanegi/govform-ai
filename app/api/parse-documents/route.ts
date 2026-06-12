@@ -173,6 +173,13 @@ async function normalizeImageForVision(bytes: Buffer, mimeType: string, fileName
     const jpegName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
 
     if (isHeicFile) {
+      // 512MB RAM wale server pe badi HEIC decode karna OOM crash karta hai —
+      // normally browser hi convert karke bhejta hai, ye sirf fallback ke liye hai
+      if (bytes.length > 4 * 1024 * 1024) {
+        throw new Error(
+          `Photo "${fileName}" bahut badi hai (${Math.round(bytes.length / 1e6)}MB). Page refresh karke dobara upload karo — browser khud compress kar dega.`
+        );
+      }
       // Pehle pure-JS converter (Linux/Render), phir macOS sips fallback
       try {
         const convertedBuffer = await convertHeicWithLib(bytes);

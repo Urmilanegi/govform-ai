@@ -285,10 +285,20 @@ export default function HomePage() {
   }, []);
 
   // Browser mein hi photo chhoti karo — phone se 8MB photo seedha 300KB ho jaati hai,
-  // upload 10x fast aur server timeout nahi hota. HEIC jo decode na ho, original jaati hai
-  // (server heic-convert se handle karta hai).
+  // upload 10x fast aur server (512MB RAM) pe load nahi padta.
+  // HEIC bhi browser mein hi JPEG banta hai (heic2any) — server pe heavy WASM nahi chalana padta.
   const compressImage = async (file: File): Promise<File> => {
-    if (!file.type.startsWith('image/') || file.size < 600 * 1024) return file;
+    const isHeic = /heic|heif/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+    if (!isHeic && (!file.type.startsWith('image/') || file.size < 600 * 1024)) return file;
+    if (isHeic) {
+      try {
+        // Safari HEIC natively decode karta hai — pehle woh try hoga (neeche createImageBitmap).
+        // Chrome/Android ke liye heic2any (browser WASM) — memory user ke device pe use hoti hai.
+        const heic2any = (await import('heic2any')).default;
+        const blob = (await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.82 })) as Blob;
+        file = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+      } catch { /* Safari pe createImageBitmap chal jayega, warna original server pe */ }
+    }
     try {
       const bitmap = await createImageBitmap(file);
       const scale = Math.min(1, 1568 / Math.max(bitmap.width, bitmap.height));
