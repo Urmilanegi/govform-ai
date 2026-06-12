@@ -93,20 +93,16 @@ const STORAGE_KEY = 'govform_profile'; // universal — sabhi exams ke liye
 // ── Bot "typing" bubble — same style as chat messages ──────────────
 function Robot({ label }: { label: string }) {
   return (
-    <div className="flex gap-3 flex-row">
-      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-1"
-        style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)' }}>🤖</div>
-      <div className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm"
-        style={{ background: 'rgba(0,220,130,0.07)', border: '1px solid rgba(0,220,130,0.35)', maxWidth: '80%' }}>
-        <p style={{ color: '#a7f3d0', fontSize: 11, marginBottom: 8 }}>{label}</p>
-        <div className="flex gap-2 items-center">
-          {[0,1,2].map(i => (
-            <div key={i} className="w-2.5 h-2.5 rounded-full"
-              style={{ background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
-          ))}
-        </div>
+    <div className="flex flex-col items-center gap-2 py-2">
+      <div className="px-5 py-3 rounded-2xl flex gap-3 items-center"
+        style={{ background: 'rgba(0,220,130,0.08)', border: '1.5px solid rgba(0,220,130,0.4)' }}>
+        {[0,1].map(i => (
+          <div key={i} className="w-3 h-3 rounded-full"
+            style={{ background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
+        ))}
       </div>
-      <style>{`@keyframes botDot { 0%,80%,100%{opacity:0.25;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.15)} }`}</style>
+      <p style={{ color: 'rgba(0,220,130,0.7)', fontSize: 11 }}>{label}</p>
+      <style>{`@keyframes botDot { 0%,80%,100%{opacity:0.2;transform:scale(0.75)} 40%{opacity:1;transform:scale(1.2)} }`}</style>
     </div>
   );
 }
@@ -1279,31 +1275,59 @@ export default function SSCPage() {
         )}
 
         {/* ── Step 5: Confirm start ── */}
-        {step === 5 && (
-          <div className="pl-11 flex gap-2 flex-wrap">
-            {saved && photoPath && signPath && mother && mobile && email ? (
-              <>
-                <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
-                  🚀 Haan, start karo!
-                </button>
-                <button onClick={() => setStep(3)} style={chipStyle()}>
-                  📁 Naye documents upload karo
-                </button>
-                <button onClick={() => setStep(4)} style={chipStyle()}>
-                  ✏️ Details change karo
-                </button>
-              </>
-            ) : (
-              <button onClick={handleStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
-                🚀 Haan, form fill karo!
+        {step === 5 && (() => {
+          let profile: Record<string,string> = {};
+          try { profile = JSON.parse(localStorage.getItem('govform_profile') || '{}'); } catch {}
+          const reqDocs = post?.requiredDocs || [];
+          const missing: { label: string; action: string }[] = [];
+          if (!mobile && !profile.mobile)   missing.push({ label: '📱 Mobile Number', action: 'details' });
+          if (!email  && !profile.email)    missing.push({ label: '📧 Email ID',      action: 'details' });
+          if (reqDocs.includes('photo') && !photoPath && !profile.photoPath)
+            missing.push({ label: '📷 Passport Photo', action: 'upload' });
+          if (!signPath && !profile.signPath)
+            missing.push({ label: '✍️ Signature', action: 'upload' });
+          if (reqDocs.includes('aadhaar') && !aadhaar && !profile.aadhaar)
+            missing.push({ label: '🪪 Aadhaar Number', action: 'home' });
+          if (reqDocs.includes('marksheet_10') && !profile.class10Board && !profile.class10Year)
+            missing.push({ label: '📄 10th Marksheet', action: 'home' });
+          if (reqDocs.includes('marksheet_12') && !profile.class12Board && !profile.class12Year)
+            missing.push({ label: '📄 12th Marksheet', action: 'home' });
+          if (reqDocs.includes('graduation_certificate') && !profile.graduationDegree && !profile.graduationYear)
+            missing.push({ label: '🎓 Graduation Certificate', action: 'home' });
+
+          if (missing.length > 0) {
+            return (
+              <div className="pl-11 space-y-3">
+                <div className="p-4 rounded-2xl space-y-2" style={{ background: 'rgba(248,113,113,0.07)', border: '1.5px solid rgba(248,113,113,0.35)' }}>
+                  <p className="text-sm font-bold" style={{ color: '#fca5a5' }}>⚠️ Pehle yeh upload karo — tab hi start hoga:</p>
+                  {missing.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl"
+                      style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                      <span className="text-sm text-red-300">{m.label}</span>
+                      {m.action === 'home' && <a href="/" className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Home pe jao →</a>}
+                      {m.action === 'upload' && <button onClick={() => setStep(3)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Upload karo →</button>}
+                      {m.action === 'details' && <button onClick={() => setStep(4)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Bharo →</button>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="pl-11 flex gap-2 flex-wrap">
+              <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
+                🚀 Haan, start karo!
               </button>
-            )}
-          </div>
-        )}
+              <button onClick={() => setStep(3)} style={chipStyle()}>📁 Documents change karo</button>
+              <button onClick={() => setStep(4)} style={chipStyle()}>✏️ Details change karo</button>
+            </div>
+          );
+        })()}
 
         {/* ── Step 6: Running — Robot + live logs ── */}
         {step === 6 && (
-          <div className="pl-11 space-y-3">
+          <div className="space-y-3">
             {logs.length > 0 && <StepTracker logs={logs} running={running} />}
 
             {running && !showCaptcha && (
