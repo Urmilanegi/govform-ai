@@ -6,8 +6,8 @@ export function FillKaroIcon({ size = 36 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
       <defs>
         <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#00DC82" />
-          <stop offset="100%" stopColor="#007A4D" />
+          <stop offset="0%" stopColor="#00D4FF" />
+          <stop offset="100%" stopColor="#155E75" />
         </linearGradient>
         <linearGradient id={`${id}-bolt`} x1="24" y1="6" x2="36" y2="38" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#E8C268" />
@@ -39,7 +39,7 @@ export function FillKaroWordmark({ size = 22 }: { size?: number }) {
     }}>
       <span style={{ color: '#F4F7F5' }}>Fill</span>
       <span style={{
-        background: 'linear-gradient(135deg, #00DC82, #7CF5C8)',
+        background: 'linear-gradient(135deg, #00D4FF, #67E8F9)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',

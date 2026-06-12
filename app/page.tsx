@@ -6,6 +6,7 @@ import { EXAMS_WITH_POSTS, Post } from '@/lib/posts-data';
 import { NOTIFICATIONS, CATEGORY_META } from '@/lib/notifications-data';
 import { Reveal, ScrollProgress, Parallax, Counter, Tilt, Wave } from '@/app/components/Animate';
 import { FillKaroIcon, FillKaroWordmark } from '@/app/components/Logo';
+import { ExamLogo } from '@/app/components/ExamLogos';
 
 const DOC_LABELS: Record<string, { label: string; icon: string }> = {
   aadhaar:                { label: 'Aadhaar Card',           icon: '🪪' },
@@ -189,6 +190,14 @@ export default function HomePage() {
   const [isDetecting, setIsDetecting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filledForms, setFilledForms] = useState<{ exam: string; date: string }[]>([]);
+
+  // Load filled-forms history when drawer opens
+  useEffect(() => {
+    if (!drawerOpen) return;
+    try { setFilledForms(JSON.parse(localStorage.getItem('fillkaro_filled') || '[]')); } catch { setFilledForms([]); }
+  }, [drawerOpen]);
   const [chatInput, setChatInput] = useState('');
   const [examError, setExamError] = useState('');
   const [openCategory, setOpenCategory] = useState<string | null>('SSC');
@@ -349,10 +358,10 @@ export default function HomePage() {
       <div className="processing-screen">
         {/* Chat bubble dots — robot orb ki jagah */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00DC82,#00A865)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🤖</div>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00D4FF,#0891B2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🤖</div>
           <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 18px 4px', padding: '14px 20px', display: 'flex', gap: 7, alignItems: 'center' }}>
             {[0,1,2].map(i => (
-              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+              <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: '#00D4FF', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
             ))}
           </div>
         </div>
@@ -388,11 +397,77 @@ export default function HomePage() {
           <a className="gf-nav-link" href="#alerts">Job Alerts</a>
           <a className="gf-nav-link" href="#how">Kaise Kaam Karta Hai</a>
           <a className="gf-nav-cta" href="/ssc">
-            <span className="live-dot" style={{ background: '#02130B', boxShadow: 'none' }} />
+            <span className="live-dot" style={{ background: '#02101A', boxShadow: 'none' }} />
             SSC LIVE
           </a>
+          <button className="gf-burger" aria-label="Menu" onClick={() => setDrawerOpen(true)}>
+            <span /><span /><span />
+          </button>
         </div>
       </nav>
+
+      {/* ═══ SIDE DRAWER ═══ */}
+      {drawerOpen && (
+        <>
+          <div className="gf-drawer-overlay" onClick={() => setDrawerOpen(false)} />
+          <aside className="gf-drawer">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FillKaroIcon size={28} />
+                <FillKaroWordmark size={16} />
+              </div>
+              <button onClick={() => setDrawerOpen(false)}
+                style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(110,200,255,0.18)', color: 'var(--text2)', fontSize: 16, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* My Exams */}
+            <div className="gf-drawer-section">
+              <div className="gf-drawer-title">📂 My Exams
+                <span style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 10px', borderRadius: 999, background: 'rgba(0,212,255,0.12)', border: '1px solid rgba(0,212,255,0.3)', WebkitTextFillColor: '#00D4FF' }}>
+                  {filledForms.length} filled
+                </span>
+              </div>
+              {filledForms.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '14px 8px' }}>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10 }}>Abhi koi form fill nahi hua</p>
+                  <a href="/ssc" className="gf-drawer-item" style={{ justifyContent: 'center', background: 'rgba(0,212,255,0.08)', border: '1px solid rgba(0,212,255,0.25)', color: '#00D4FF', fontWeight: 700 }}>
+                    🚀 Pehla form bharo →
+                  </a>
+                </div>
+              ) : (
+                filledForms.slice().reverse().map((f, i) => (
+                  <div key={i} className="gf-drawer-item">
+                    <ExamLogo exam={f.exam} size={30} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, color: 'var(--text1)', fontWeight: 600 }}>{f.exam}</p>
+                      <p style={{ fontSize: 10, color: 'var(--text3)' }}>{f.date}</p>
+                    </div>
+                    <span style={{ fontSize: 10, color: '#4ade80', fontWeight: 700 }}>✓ Filled</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Admit Card */}
+            <div className="gf-drawer-section">
+              <div className="gf-drawer-title">🎫 Admit Card</div>
+              <a className="gf-drawer-item" href="https://ssc.gov.in/login" target="_blank" rel="noreferrer"><ExamLogo exam="ssc" size={26} /> SSC Admit Card</a>
+              <a className="gf-drawer-item" href="https://www.rrbapply.gov.in/#/auth/landing" target="_blank" rel="noreferrer"><ExamLogo exam="rrb" size={26} /> Railway (RRB) Admit Card</a>
+              <a className="gf-drawer-item" href="https://upsconline.nic.in/eadmitcard/admitcard.php" target="_blank" rel="noreferrer"><ExamLogo exam="upsc" size={26} /> UPSC e-Admit Card</a>
+              <a className="gf-drawer-item" href="https://www.ibps.in" target="_blank" rel="noreferrer"><ExamLogo exam="ibps" size={26} /> IBPS Admit Card</a>
+            </div>
+
+            {/* Latest Results */}
+            <div className="gf-drawer-section">
+              <div className="gf-drawer-title">🏆 Latest Result</div>
+              <a className="gf-drawer-item" href="https://ssc.gov.in/portal/results" target="_blank" rel="noreferrer"><ExamLogo exam="ssc" size={26} /> SSC Results</a>
+              <a className="gf-drawer-item" href="https://www.rrbcdg.gov.in" target="_blank" rel="noreferrer"><ExamLogo exam="rrb" size={26} /> Railway Results</a>
+              <a className="gf-drawer-item" href="https://upsc.gov.in/examinations/final-results" target="_blank" rel="noreferrer"><ExamLogo exam="upsc" size={26} /> UPSC Final Results</a>
+              <a className="gf-drawer-item" href="https://www.ibps.in/crp-po-mt" target="_blank" rel="noreferrer"><ExamLogo exam="bank" size={26} /> Banking Results</a>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* ═══ HERO ═══ */}
       <section className="gf-hero">
@@ -485,7 +560,7 @@ export default function HomePage() {
             const hasDate = /\d/.test(ex.status);
             return (
               <div key={i} className="gf-exam-card" onClick={() => detectExam(ex.name)}>
-                <div className="gf-exam-card-icon">{ex.icon}</div>
+                <div className="gf-exam-logo3d"><ExamLogo exam={ex.name} size={40} /></div>
                 <div style={{ minWidth: 0 }}>
                   <div className="gf-exam-card-name">{ex.name}</div>
                   <div className="gf-exam-card-status" style={{ color: isLive ? 'var(--emerald)' : hasDate ? 'var(--champagne)' : 'var(--text3)' }}>
@@ -594,7 +669,7 @@ export default function HomePage() {
                   <div key={cat.id}>
                     {cat.exams.map(exam => (
                       <div key={exam.name} className="gf-row" onClick={() => detectExam(exam.name)}>
-                        <div className="gf-row-icon">{cat.icon}</div>
+                        <ExamLogo exam={exam.name} size={36} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 15, fontWeight: 700 }}>{exam.name}</div>
                           <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 1 }}>{exam.posts} Posts</div>
@@ -618,7 +693,7 @@ export default function HomePage() {
                     style={{ flex: 1 }}
                   />
                   <button onClick={() => detectExam(chatInput)} disabled={isDetecting || !chatInput.trim()}
-                    style={{ padding: '0 20px', background: 'linear-gradient(135deg, #00DC82, #00A865)', borderRadius: 14, color: '#02130B', fontWeight: 900, fontSize: 18, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: (!chatInput.trim() || isDetecting) ? 0.4 : 1 }}>
+                    style={{ padding: '0 20px', background: 'linear-gradient(135deg, #00D4FF, #0891B2)', borderRadius: 14, color: '#02101A', fontWeight: 900, fontSize: 18, border: 'none', cursor: 'pointer', flexShrink: 0, opacity: (!chatInput.trim() || isDetecting) ? 0.4 : 1 }}>
                     →
                   </button>
                 </div>
@@ -686,7 +761,7 @@ export default function HomePage() {
 
               {stepActive(3) && (
                 <div>
-                  <div style={{ margin: '0 24px 14px', padding: 18, background: folderGranted ? 'rgba(0,220,130,0.06)' : 'rgba(232,194,104,0.05)', border: `1px solid ${folderGranted ? 'rgba(0,220,130,0.25)' : 'rgba(232,194,104,0.2)'}`, borderRadius: 14 }}>
+                  <div style={{ margin: '0 24px 14px', padding: 18, background: folderGranted ? 'rgba(0,212,255,0.06)' : 'rgba(232,194,104,0.05)', border: `1px solid ${folderGranted ? 'rgba(0,212,255,0.25)' : 'rgba(232,194,104,0.2)'}`, borderRadius: 14 }}>
                     {!folderGranted ? (
                       <>
                         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>⚡ Smart Upload Mode</div>
@@ -763,7 +838,7 @@ export default function HomePage() {
                     { label: 'POST', value: selectedPost?.name || 'General' },
                     { label: 'DOCS', value: mounted ? (uploadedDocs.length > 0 ? `${uploadedDocs.length} uploaded` : 'Demo data') : '...' },
                   ].map((s, i) => (
-                    <div key={i} style={{ flex: 1, minWidth: 120, background: 'rgba(0,220,130,0.06)', border: '1px solid rgba(0,220,130,0.2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
+                    <div key={i} style={{ flex: 1, minWidth: 120, background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
                       <div style={{ fontSize: 10, color: 'var(--emerald)', fontWeight: 800, marginBottom: 5, letterSpacing: 1.5 }}>{s.label}</div>
                       <div style={{ fontSize: 12, color: 'var(--text1)', fontWeight: 700, wordBreak: 'break-word' }}>{s.value}</div>
                     </div>
@@ -828,9 +903,9 @@ export default function HomePage() {
           {/* Right — 2×2 card grid */}
           <div className="gf-why-grid reveal-stagger in">
             {[
-              { icon: '🤖', title: 'AI Auto-Fill', desc: 'Captcha, dropdowns, photo, signature — AI sab khud bharega. Tum bas dekho.', bg: 'rgba(0,220,130,0.08)', ic: 'linear-gradient(135deg,#00DC82,#00A865)' },
+              { icon: '🤖', title: 'AI Auto-Fill', desc: 'Captcha, dropdowns, photo, signature — AI sab khud bharega. Tum bas dekho.', bg: 'rgba(0,212,255,0.08)', ic: 'linear-gradient(135deg,#00D4FF,#0891B2)' },
               { icon: '⚡', title: '5 Minute Mein', desc: 'Ghanton ka kaam minute me. Time bachao, tension bilkul chhodo.', bg: 'rgba(232,194,104,0.07)', ic: 'linear-gradient(135deg,#E8C268,#C9A14E)' },
-              { icon: '🎯', title: '98% Accuracy', desc: 'Claude AI document se exact data nikaalta hai — galti ki gunjaish nahi.', bg: 'rgba(124,245,200,0.07)', ic: 'linear-gradient(135deg,#7CF5C8,#00DC82)' },
+              { icon: '🎯', title: '98% Accuracy', desc: 'Claude AI document se exact data nikaalta hai — galti ki gunjaish nahi.', bg: 'rgba(124,245,200,0.07)', ic: 'linear-gradient(135deg,#67E8F9,#00D4FF)' },
               { icon: '🔒', title: '100% Secure', desc: 'Data 24hr me delete. No account, no spam — sirf form, bas.', bg: 'rgba(100,120,255,0.07)', ic: 'linear-gradient(135deg,#818cf8,#6366f1)' },
             ].map((c, i) => (
               <Tilt key={i} max={6} className="gf-why-card" style={{ background: c.bg }}>
@@ -863,7 +938,7 @@ export default function HomePage() {
               { icon: '🎓', bg: 'rgba(124,245,200,0.1)', n: 19054, label: 'SSC Forms' },
               { icon: '🏦', bg: 'rgba(91,124,255,0.1)', n: 18921, label: 'Banking Forms' },
               { icon: '🚆', bg: 'rgba(232,194,104,0.1)', n: 7087, label: 'Railway Forms' },
-              { icon: '🏛️', bg: 'rgba(0,220,130,0.1)', n: 8505, label: 'Other Govt Forms' },
+              { icon: '🏛️', bg: 'rgba(0,212,255,0.1)', n: 8505, label: 'Other Govt Forms' },
             ].map((r, i) => (
               <div key={i} className="gf-result-cell">
                 <div className="gf-result-icon" style={{ background: r.bg }}>{r.icon}</div>
@@ -879,7 +954,7 @@ export default function HomePage() {
 
       {/* ═══ CTA BAND ═══ */}
       <Reveal variant="reveal-zoom" className="gf-section">
-        <div style={{ textAlign: 'center', padding: 'clamp(36px,6vw,64px) 28px', borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)', background: 'linear-gradient(135deg, rgba(0,220,130,0.12), rgba(232,194,104,0.06))', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ textAlign: 'center', padding: 'clamp(36px,6vw,64px) 28px', borderRadius: 'var(--radius)', border: '1px solid var(--border-strong)', background: 'linear-gradient(135deg, rgba(0,212,255,0.12), rgba(232,194,104,0.06))', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden' }}>
           <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, letterSpacing: '-1.5px', marginBottom: 12 }}>
             Aaj hi <span className="text-gradient">apna form</span> bhardo
           </h2>

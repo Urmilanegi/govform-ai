@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FillKaroIcon, FillKaroWordmark } from '@/app/components/Logo';
+import { ExamLogo } from '@/app/components/ExamLogos';
 import { EXAMS_WITH_POSTS, DOC_LABELS, ExamWithPosts, Post } from '@/lib/posts-data';
 import CenterSelector from '@/app/components/CenterSelector';
 import { UPSC_CENTERS } from '@/lib/upsc-centers';
@@ -95,13 +96,13 @@ function Robot({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center gap-2 py-2">
       <div className="px-5 py-3 rounded-2xl flex gap-3 items-center"
-        style={{ background: 'rgba(0,220,130,0.08)', border: '1.5px solid rgba(0,220,130,0.4)' }}>
+        style={{ background: 'rgba(0,212,255,0.08)', border: '1.5px solid rgba(0,212,255,0.4)' }}>
         {[0,1].map(i => (
           <div key={i} className="w-3 h-3 rounded-full"
-            style={{ background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
+            style={{ background: '#00D4FF', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.25}s` }} />
         ))}
       </div>
-      <p style={{ color: 'rgba(0,220,130,0.7)', fontSize: 11 }}>{label}</p>
+      <p style={{ color: 'rgba(0,212,255,0.7)', fontSize: 11 }}>{label}</p>
       <style>{`@keyframes botDot { 0%,80%,100%{opacity:0.2;transform:scale(0.75)} 40%{opacity:1;transform:scale(1.2)} }`}</style>
     </div>
   );
@@ -166,25 +167,25 @@ function CameraCapture({ label, onDone }: { label: string; onDone: () => void })
   };
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-400 p-5 space-y-3"
+    <div className="rounded-2xl border-2 border-cyan-400 p-5 space-y-3"
       style={{ background: 'rgba(0,0,0,0.88)', boxShadow: '0 0 30px rgba(16,185,129,0.4)', animation: 'qSlideIn 0.35s ease-out' }}>
-      <p className="text-emerald-300 font-bold text-sm">📷 {label.replace(/ \(Ho jaye.*$/i, '')}</p>
-      <div className="rounded-xl overflow-hidden border border-emerald-400/40 bg-black flex items-center justify-center" style={{ minHeight: 220 }}>
+      <p className="text-cyan-300 font-bold text-sm">📷 {label.replace(/ \(Ho jaye.*$/i, '')}</p>
+      <div className="rounded-xl overflow-hidden border border-cyan-400/40 bg-black flex items-center justify-center" style={{ minHeight: 220 }}>
         {shot
           ? <img src={shot} alt="captured" style={{ maxHeight: 280, display: 'block' }} />
           : <video ref={videoRef} muted playsInline style={{ maxHeight: 280, transform: 'scaleX(-1)' }} />}
       </div>
-      {status && <p className="text-xs text-emerald-200">{status}</p>}
+      {status && <p className="text-xs text-cyan-200">{status}</p>}
       <div className="flex gap-2 flex-wrap">
         {!shot ? (
           <button onClick={capture} className="flex-1 py-3 rounded-xl font-bold text-sm"
-            style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white' }}>📸 Photo khquo</button>
+            style={{ background: 'linear-gradient(135deg,#06b6d4,#0284c7)', color: 'white' }}>📸 Photo khquo</button>
         ) : (
           <>
             <button onClick={() => setShot('')} disabled={busy} className="px-4 py-3 rounded-xl font-bold text-sm"
               style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>🔄 Dobara</button>
             <button onClick={usePhoto} disabled={busy} className="flex-1 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white' }}>✅ Ye photo use karo</button>
+              style={{ background: 'linear-gradient(135deg,#06b6d4,#0284c7)', color: 'white' }}>✅ Ye photo use karo</button>
           </>
         )}
       </div>
@@ -240,11 +241,11 @@ function StepTracker({ logs, running }: { logs: LogEntry[]; running: boolean }) 
           const isFailed  = i === idx && failed;
           const bg = isFailed ? 'rgba(248,113,113,0.15)'
             : isDone ? 'rgba(34,197,94,0.15)'
-            : isCurrent ? 'rgba(0,220,130,0.18)'
+            : isCurrent ? 'rgba(0,212,255,0.18)'
             : 'rgba(255,255,255,0.04)';
           const bd = isFailed ? 'rgba(248,113,113,0.5)'
             : isDone ? 'rgba(34,197,94,0.4)'
-            : isCurrent ? 'rgba(0,220,130,0.6)'
+            : isCurrent ? 'rgba(0,212,255,0.6)'
             : 'rgba(255,255,255,0.08)';
           const col = isFailed ? '#f87171' : isDone ? '#4ade80' : isCurrent ? '#c4b5fd' : '#6b7280';
           return (
@@ -631,6 +632,12 @@ export default function SSCPage() {
           setDone(true);
           setRunning(false);
           es.close();
+          // My Exams history — drawer mein dikhta hai
+          try {
+            const hist = JSON.parse(localStorage.getItem('fillkaro_filled') || '[]');
+            hist.push({ exam: exam?.name || examId, date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) });
+            localStorage.setItem('fillkaro_filled', JSON.stringify(hist));
+          } catch {}
         }
         if (data.type === 'error' || data.type === 'closed') {
           setRunning(false);
@@ -892,18 +899,18 @@ export default function SSCPage() {
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
-    border: active ? '2px solid #00DC82' : '1px solid rgba(255,255,255,0.15)',
-    background: active ? 'rgba(0,220,130,0.3)' : 'rgba(255,255,255,0.05)',
+    border: active ? '2px solid #00D4FF' : '1px solid rgba(255,255,255,0.15)',
+    background: active ? 'rgba(0,212,255,0.3)' : 'rgba(255,255,255,0.05)',
     color: 'white',
     transition: 'all 0.15s',
   });
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #060807 0%, #08120d 55%, #050706 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #03060B 0%, #071018 55%, #03060B 100%)' }}>
 
       {/* Header */}
       <div className="border-b px-4 py-0 flex items-center gap-3 sticky top-0 z-20"
-        style={{ background: 'rgba(6,8,7,0.85)', backdropFilter: 'blur(20px)', borderColor: 'rgba(120,220,170,0.12)', minHeight: 56 }}>
+        style={{ background: 'rgba(4,8,14,0.85)', backdropFilter: 'blur(20px)', borderColor: 'rgba(110,200,255,0.12)', minHeight: 56 }}>
         {/* Logo */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <FillKaroIcon size={32} />
@@ -921,8 +928,8 @@ export default function SSCPage() {
           )}
           {running && (
             <span className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-              style={{ background: 'rgba(0,220,130,0.12)', border: '1px solid rgba(0,220,130,0.25)', color: '#7CF5C8' }}>
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#00DC82' }} />
+              style={{ background: 'rgba(0,212,255,0.12)', border: '1px solid rgba(0,212,255,0.25)', color: '#67E8F9' }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#00D4FF' }} />
               Live
             </span>
           )}
@@ -938,7 +945,7 @@ export default function SSCPage() {
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {msg.role === 'bot' && (
               <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-1"
-                style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)' }}>🤖</div>
+                style={{ background: 'linear-gradient(135deg, #00D4FF, #0891B2)' }}>🤖</div>
             )}
             <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
               msg.role === 'user'
@@ -946,7 +953,7 @@ export default function SSCPage() {
                 : 'rounded-tl-sm text-gray-100'
             }`} style={{
               background: msg.role === 'user'
-                ? 'linear-gradient(135deg, #00DC82, #00A865)'
+                ? 'linear-gradient(135deg, #00D4FF, #0891B2)'
                 : 'rgba(255,255,255,0.07)',
               border: msg.role === 'bot' ? '1px solid rgba(255,255,255,0.08)' : 'none',
             }}>
@@ -960,8 +967,9 @@ export default function SSCPage() {
         {step === 1 && (
           <div className="flex gap-2 flex-wrap pl-11">
             {EXAMS_WITH_POSTS.map(ex => (
-              <button key={ex.id} onClick={() => handleExamSelect(ex)} style={chipStyle()}>
-                {ex.icon} {ex.shortName}
+              <button key={ex.id} onClick={() => handleExamSelect(ex)}
+                style={{ ...chipStyle(), display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <ExamLogo exam={ex.id} size={22} /> {ex.shortName}
               </button>
             ))}
           </div>
@@ -991,7 +999,7 @@ export default function SSCPage() {
               </div>
 
               {/* Info banner */}
-              <div className="px-3 py-2.5 rounded-xl text-xs" style={{ background: 'rgba(0,220,130,0.12)', border: '1px solid rgba(0,220,130,0.3)' }}>
+              <div className="px-3 py-2.5 rounded-xl text-xs" style={{ background: 'rgba(0,212,255,0.12)', border: '1px solid rgba(0,212,255,0.3)' }}>
                 <p className="text-violet-300 font-medium mb-0.5">SSO ID kya hota hai?</p>
                 <p className="text-gray-400">Rajasthan ke sabhi govt exams (RPSC, RSMSSB, REET, Police) ek hi SSO ID se bhar sakte hain. Agar nahi hai toh blank chhodo — main register kar dunga.</p>
               </div>
@@ -1024,7 +1032,7 @@ export default function SSCPage() {
                   onClick={() => handleSsoDone(false)}
                   disabled={!!ssoInput.id && !ssoInput.pass}
                   className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all"
-                  style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)', color: 'white' }}
+                  style={{ background: 'linear-gradient(135deg, #00D4FF, #0891B2)', color: 'white' }}
                 >
                   {ssoInput.id ? '✅ Login karke start karo' : '📋 Mujhe naya register karo'}
                 </button>
@@ -1058,7 +1066,7 @@ export default function SSCPage() {
                 onClick={handleCentersDone}
                 disabled={selectedCenters.length === 0}
                 className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all"
-                style={{ background: selectedCenters.length > 0 ? 'linear-gradient(135deg, #00DC82, #00A865)' : 'rgba(255,255,255,0.1)', color: 'white' }}
+                style={{ background: selectedCenters.length > 0 ? 'linear-gradient(135deg, #00D4FF, #0891B2)' : 'rgba(255,255,255,0.1)', color: 'white' }}
               >
                 {selectedCenters.length === 0 ? 'Kam se kam 1 center choose karo' : `✅ ${selectedCenters.length} Center${selectedCenters.length > 1 ? 's' : ''} Confirm karo`}
               </button>
@@ -1173,7 +1181,7 @@ export default function SSCPage() {
                 onClick={handleQualificationDone}
                 disabled={!qualification.degree || !qualification.college || !qualification.passingYear || !qualification.percentage}
                 className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-40 transition-all mt-1"
-                style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)', color: 'white' }}
+                style={{ background: 'linear-gradient(135deg, #00D4FF, #0891B2)', color: 'white' }}
               >
                 ✅ Qualification Confirm karo
               </button>
@@ -1189,7 +1197,7 @@ export default function SSCPage() {
               {/* No profile saved — redirect hint */}
               {(!mother || !mobile || !email) && (
                 <a href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(0,220,130,0.1)', border: '2px dashed rgba(0,220,130,0.5)' }}>
+                  style={{ background: 'rgba(0,212,255,0.1)', border: '2px dashed rgba(0,212,255,0.5)' }}>
                   <span className="text-2xl">🪪</span>
                   <div className="flex-1">
                     <p className="text-sm text-white font-semibold">Pehle Documents Upload karo</p>
@@ -1221,7 +1229,7 @@ export default function SSCPage() {
               <button onClick={handleDocsUploaded}
                 disabled={!photoPath || !signPath}
                 className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
-                style={{ background: (photoPath && signPath) ? 'linear-gradient(135deg,#00DC82,#00A865)' : 'rgba(255,255,255,0.1)', color: 'white' }}>
+                style={{ background: (photoPath && signPath) ? 'linear-gradient(135deg,#00D4FF,#0891B2)' : 'rgba(255,255,255,0.1)', color: 'white' }}>
                 {photoPath && signPath ? '✅ Aage badhein' : 'Photo aur Signature upload karo'}
               </button>
             </div>
@@ -1267,7 +1275,7 @@ export default function SSCPage() {
               <button onClick={handleDetailsSubmit}
                 disabled={!detailsInput.mother || !detailsInput.mobile || !detailsInput.email}
                 className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
-                style={{ background: 'linear-gradient(135deg,#00DC82,#00A865)', color: 'white' }}>
+                style={{ background: 'linear-gradient(135deg,#00D4FF,#0891B2)', color: 'white' }}>
                 ✅ Confirm & Aage badhein
               </button>
             </div>
@@ -1304,9 +1312,9 @@ export default function SSCPage() {
                     <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl"
                       style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
                       <span className="text-sm text-red-300">{m.label}</span>
-                      {m.action === 'home' && <a href="/" className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Home pe jao →</a>}
-                      {m.action === 'upload' && <button onClick={() => setStep(3)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Upload karo →</button>}
-                      {m.action === 'details' && <button onClick={() => setStep(4)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,220,130,0.15)', color: '#00DC82', border: '1px solid rgba(0,220,130,0.3)' }}>Bharo →</button>}
+                      {m.action === 'home' && <a href="/" className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}>Home pe jao →</a>}
+                      {m.action === 'upload' && <button onClick={() => setStep(3)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}>Upload karo →</button>}
+                      {m.action === 'details' && <button onClick={() => setStep(4)} className="text-xs px-3 py-1 rounded-full font-semibold" style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}>Bharo →</button>}
                     </div>
                   ))}
                 </div>
@@ -1316,7 +1324,7 @@ export default function SSCPage() {
 
           return (
             <div className="pl-11 flex gap-2 flex-wrap">
-              <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00DC82,#00A865)', border: 'none' }}>
+              <button onClick={handleSavedStart} style={{ ...chipStyle(), background: 'linear-gradient(135deg,#00D4FF,#0891B2)', border: 'none' }}>
                 🚀 Haan, start karo!
               </button>
               <button onClick={() => setStep(3)} style={chipStyle()}>📁 Documents change karo</button>
@@ -1572,7 +1580,7 @@ export default function SSCPage() {
                   />
                   <button onClick={() => submitOtp()}
                     className="w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'linear-gradient(135deg,#00A865,#1d4ed8)', color: 'white' }}>
+                    style={{ background: 'linear-gradient(135deg,#0891B2,#1d4ed8)', color: 'white' }}>
                     {isDone    ? '✅ Done — Aage badhao' :
                      isYesNo   ? '✅ Submit' :
                      isAadhaar ? 'Submit Aadhaar' :
