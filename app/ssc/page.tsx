@@ -230,35 +230,47 @@ function deriveStage(logs: LogEntry[]): { idx: number; failed: boolean } {
   return { idx, failed };
 }
 
+// Vertical checklist — complete hone par line REMOVE ho jaati hai
 function StepTracker({ logs, running }: { logs: LogEntry[]; running: boolean }) {
   const { idx, failed } = deriveStage(logs);
+  const doneCount = Math.min(idx, FILL_STAGES.length - 1);
+  const remaining = FILL_STAGES.filter((_, i) => i >= idx && i !== FILL_STAGES.length - 1);
   return (
-    <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-      <div className="flex flex-wrap gap-1.5">
-        {FILL_STAGES.map((s, i) => {
-          const isDone    = i < idx || (i === idx && idx === 7);
-          const isCurrent = i === idx && running && idx !== 7;
-          const isFailed  = i === idx && failed;
-          const bg = isFailed ? 'rgba(248,113,113,0.15)'
-            : isDone ? 'rgba(34,197,94,0.15)'
-            : isCurrent ? 'rgba(0,212,255,0.18)'
-            : 'rgba(255,255,255,0.04)';
-          const bd = isFailed ? 'rgba(248,113,113,0.5)'
-            : isDone ? 'rgba(34,197,94,0.4)'
-            : isCurrent ? 'rgba(0,212,255,0.6)'
-            : 'rgba(255,255,255,0.08)';
-          const col = isFailed ? '#f87171' : isDone ? '#4ade80' : isCurrent ? '#c4b5fd' : '#6b7280';
+    <div className="rounded-2xl p-4 mx-auto w-full" style={{ maxWidth: 380, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      {doneCount > 0 && (
+        <p className="text-xs mb-3 font-semibold" style={{ color: '#4ade80' }}>✅ {doneCount} step{doneCount > 1 ? 's' : ''} complete</p>
+      )}
+      <div className="flex flex-col gap-2">
+        {idx === 7 ? (
+          <div className="flex items-center gap-2 text-sm font-bold" style={{ color: '#4ade80' }}>
+            ✅ Form Submitted!
+          </div>
+        ) : remaining.map((s, i) => {
+          const isCurrent = i === 0 && running;
+          const isFailed  = i === 0 && failed;
           return (
-            <div key={s.key} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold"
-              style={{ background: bg, border: `1px solid ${bd}`, color: col,
-                ...(isCurrent ? { animation: 'stagePulse 1.2s ease-in-out infinite' } : {}) }}>
-              <span>{isFailed ? '⚠️' : isDone ? '✅' : isCurrent ? s.icon : s.icon}</span>
+            <div key={s.key} className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: isFailed ? 'rgba(248,113,113,0.12)' : isCurrent ? 'rgba(0,212,255,0.12)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isFailed ? 'rgba(248,113,113,0.45)' : isCurrent ? 'rgba(0,212,255,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                color: isFailed ? '#f87171' : isCurrent ? '#7DD3FC' : '#6b7280',
+                ...(isCurrent ? { animation: 'stagePulse 1.2s ease-in-out infinite' } : {}),
+              }}>
+              <span>{isFailed ? '⚠️' : s.icon}</span>
               <span>{s.label}</span>
+              {isCurrent && !isFailed && (
+                <span className="ml-auto flex gap-1">
+                  {[0,1,2].map(d => (
+                    <span key={d} className="w-1.5 h-1.5 rounded-full inline-block"
+                      style={{ background: '#00D4FF', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${d * 0.18}s` }} />
+                  ))}
+                </span>
+              )}
             </div>
           );
         })}
       </div>
-      <style>{`@keyframes stagePulse { 0%,100%{opacity:1} 50%{opacity:0.55} }`}</style>
+      <style>{`@keyframes stagePulse { 0%,100%{opacity:1} 50%{opacity:0.55} } @keyframes botDot { 0%,80%,100%{opacity:0.25;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.15)} }`}</style>
     </div>
   );
 }
@@ -394,6 +406,26 @@ export default function SSCPage() {
 
   // Step 0 → greeting
   useEffect(() => {
+    // ── AUTO MODE: home page se documents parse hoke aaya — seedha background fill ──
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auto') === '1') {
+      const examId = params.get('exam') || 'ssc-cgl';
+      const found = EXAMS_WITH_POSTS.find(e => e.id === examId) || null;
+      if (found) setExam(found);
+      let p: Record<string, string> = {};
+      try { p = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
+      setTimeout(() => {
+        addMsg('bot', '🤖 Documents se saari details mil gayi! Ab main background mein official site pe form bhar raha hoon...');
+        setStep(6);
+        startFill(
+          examId,
+          p.mother || '', p.mobile || '', p.email || '', p.aadhaar || '',
+          p.visibleMark || 'Mole on right hand', p.photoPath || '', p.signPath || ''
+        );
+      }, 400);
+      return;
+    }
+
     setTimeout(() => {
       const hasSaved = !!localStorage.getItem(STORAGE_KEY);
       addMsg('bot', 'Namaste! 👋 Main tumhara Government Form Auto-Fill Assistant hoon.');
@@ -1333,18 +1365,34 @@ export default function SSCPage() {
           );
         })()}
 
-        {/* ── Step 6: Running — Robot + live logs ── */}
+        {/* ── Step 6: Running — "AI Kaam Kar Raha Hai" centered + checklist ── */}
         {step === 6 && (
-          <div className="space-y-3">
-            {logs.length > 0 && <StepTracker logs={logs} running={running} />}
-
-            {running && !showCaptcha && (
-              <Robot label={
-                logs.length === 0 ? 'Browser kholke SSC site ja raha hoon...' :
-                logs.length < 3  ? 'Login kar raha hoon...' :
-                'Form fill ho raha hai...'
-              } />
+          <div className="space-y-4">
+            {running && !showCaptcha && !showOtp && (
+              <div className="flex flex-col items-center text-center gap-3 py-6">
+                {/* Robot + dots bubble */}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                    style={{ background: 'linear-gradient(135deg,#00D4FF,#0891B2)' }}>🤖</div>
+                  <div className="px-5 py-3 rounded-2xl flex gap-2.5 items-center"
+                    style={{ background: 'rgba(0,212,255,0.08)', border: '1.5px solid rgba(0,212,255,0.35)', borderRadius: '18px 18px 18px 4px' }}>
+                    {[0,1,2].map(i => (
+                      <div key={i} className="w-2.5 h-2.5 rounded-full"
+                        style={{ background: '#00D4FF', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+                    ))}
+                  </div>
+                </div>
+                <h2 style={{ fontSize: 24, fontWeight: 900, color: '#F2F7FA', letterSpacing: '-0.5px' }}>AI Kaam Kar Raha Hai</h2>
+                <p style={{ fontSize: 14, color: '#00D4FF', fontWeight: 700 }}>
+                  ✍️ {logs.length === 0 ? 'Browser kholke official site ja raha hoon...' :
+                      logs.length < 3  ? 'Login kar raha hoon...' :
+                      'Form fill kar raha hoon...'}
+                </p>
+                <p style={{ fontSize: 12, color: '#5C6E7D' }}>Tum aaram se baitho — har step yahan dikh raha hai 👇</p>
+              </div>
             )}
+
+            {logs.length > 0 && <StepTracker logs={logs} running={running} />}
 
             {/* Live log stream */}
             {logs.length > 0 && (

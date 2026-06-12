@@ -380,7 +380,8 @@ export default function HomePage() {
       let existing: Record<string, string> = {};
       try { existing = JSON.parse(localStorage.getItem('govform_profile') || '{}'); } catch {}
       localStorage.setItem('govform_profile', JSON.stringify({ ...existing, ...sscProfile }));
-      router.push('/review');
+      // Review page skip — seedha background form fill (SSC page auto mode)
+      router.push(`/ssc?auto=1&exam=${encodeURIComponent(detectedExam.id)}`);
     } catch (err) {
       alert('Error: ' + String(err));
       setIsProcessing(false);
