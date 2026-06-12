@@ -127,10 +127,14 @@ async function normalizeImageForVision(bytes: Buffer, mimeType: string, fileName
   try {
     const image = sharp(bytes, { failOn: 'none' }).rotate();
     const metadata = await image.metadata();
+    // 1568px is the model's effective max — bigger images sirf upload/processing
+    // slow karti hain, accuracy same rehti hai. Phone photos (4-8MB) yahan
+    // ~200-400KB ban jaati hain = much faster on mobile networks.
     const requiresConversion =
       !SUPPORTED_IMAGE_MIME_TYPES.has(mimeType) ||
-      (metadata.width ?? 0) > 2400 ||
-      (metadata.height ?? 0) > 2400;
+      bytes.length > 500 * 1024 ||
+      (metadata.width ?? 0) > 1568 ||
+      (metadata.height ?? 0) > 1568;
 
     if (!requiresConversion) {
       return {
@@ -141,13 +145,13 @@ async function normalizeImageForVision(bytes: Buffer, mimeType: string, fileName
 
     const normalizedBuffer = await image
       .resize({
-        width: 2400,
-        height: 2400,
+        width: 1568,
+        height: 1568,
         fit: 'inside',
         withoutEnlargement: true
       })
       .jpeg({
-        quality: 92,
+        quality: 82,
         mozjpeg: true
       })
       .toBuffer();
@@ -321,10 +325,11 @@ IMPORTANT:
 
     let response;
     try {
+      // Haiku 4.5 — fastest vision model; extraction is a simple structured task,
+      // no thinking needed (thinking adds latency)
       response = await client.messages.create({
-        model: 'claude-opus-4-6',
+        model: 'claude-haiku-4-5',
         max_tokens: 4000,
-        thinking: { type: 'adaptive' },
         messages: [{ role: 'user', content: contentBlocks }]
       });
     } catch (apiErr) {
