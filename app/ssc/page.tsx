@@ -97,11 +97,11 @@ function Robot({ label }: { label: string }) {
       <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 mt-1"
         style={{ background: 'linear-gradient(135deg, #00DC82, #00A865)' }}>🤖</div>
       <div className="px-4 py-3 rounded-2xl rounded-tl-sm text-sm"
-        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)', maxWidth: '80%' }}>
-        <p className="text-gray-300 text-xs mb-2">{label}</p>
-        <div className="flex gap-1.5 items-center">
+        style={{ background: 'rgba(0,220,130,0.07)', border: '1px solid rgba(0,220,130,0.35)', maxWidth: '80%' }}>
+        <p style={{ color: '#a7f3d0', fontSize: 11, marginBottom: 8 }}>{label}</p>
+        <div className="flex gap-2 items-center">
           {[0,1,2].map(i => (
-            <div key={i} className="w-2 h-2 rounded-full"
+            <div key={i} className="w-2.5 h-2.5 rounded-full"
               style={{ background: '#00DC82', animation: 'botDot 1.2s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
           ))}
         </div>
@@ -831,26 +831,42 @@ export default function SSCPage() {
   };
 
   const checkDocsAndStart = (savedMode: boolean) => {
+    // Load full profile to check parsed document data
+    let profile: Record<string, string> = {};
+    try { profile = JSON.parse(localStorage.getItem('govform_profile') || '{}'); } catch {}
+
     const missingDocs: string[] = [];
-    if (!photoPath) missingDocs.push('📷 Passport Photo');
-    if (!signPath)  missingDocs.push('✍️ Signature');
-    if (!mobile)    missingDocs.push('📱 Mobile Number');
-    if (!email)     missingDocs.push('📧 Email ID');
+
+    // Check personal details first
+    if (!mobile && !profile.mobile)   missingDocs.push('📱 Mobile Number — details mein bharo');
+    if (!email  && !profile.email)    missingDocs.push('📧 Email ID — details mein bharo');
+
+    // Check post-specific required documents
+    const reqDocs = post?.requiredDocs || [];
+    if (reqDocs.includes('photo') && !photoPath && !profile.photoPath)
+      missingDocs.push('📷 Passport Photo — upload karo');
+    if (!signPath && !profile.signPath)
+      missingDocs.push('✍️ Signature — upload karo');
+    if (reqDocs.includes('aadhaar') && !aadhaar && !profile.aadhaar)
+      missingDocs.push('🪪 Aadhaar Number — home page pe Aadhaar upload karo');
+    if (reqDocs.includes('marksheet_10') && !profile.class10Board && !profile.class10Year)
+      missingDocs.push('📄 10th Marksheet — home page pe upload karo');
+    if (reqDocs.includes('marksheet_12') && !profile.class12Board && !profile.class12Year)
+      missingDocs.push('📄 12th Marksheet — home page pe upload karo');
+    if (reqDocs.includes('graduation_certificate') && !profile.graduationDegree && !profile.graduationYear)
+      missingDocs.push('🎓 Graduation Certificate — home page pe upload karo');
 
     if (missingDocs.length > 0) {
       addMsg('user', savedMode ? 'Haan, saved details se start karo!' : 'Haan, start karo!');
       setTimeout(() => {
-        addMsg('bot', `⚠️ Ruko! Yeh required cheezein missing hain:\n${missingDocs.join('\n')}\n\nIn bina form submit nahi hoga. Pehle upload karo.`);
-        setStep(3);
+        addMsg('bot', `⚠️ Ruko! Yeh cheezein missing hain — in bina form submit nahi hoga:\n\n${missingDocs.join('\n')}\n\nPehle ye provide karo, phir start karo.`);
+        // Go to upload step if photo/sign missing, else stay
+        if (!photoPath && !profile.photoPath) setStep(3);
       }, 300);
       return;
     }
 
-    if (savedMode) {
-      addMsg('user', 'Haan, saved details se start karo!');
-    } else {
-      addMsg('user', 'Haan, start karo!');
-    }
+    addMsg('user', savedMode ? 'Haan, saved details se start karo!' : 'Haan, start karo!');
     setTimeout(() => {
       const portalName = exam?.name || 'portal';
       addMsg('bot', `🤖 Theek hai! Browser kholke ${portalName} site pe ja raha hoon...`);
