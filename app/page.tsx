@@ -284,6 +284,36 @@ export default function HomePage() {
     setUploadedDocs(prev => [...prev.filter(d => d.type !== docType), { type: docType, label: DOC_LABELS[docType]?.label || docType, file }]);
   }, []);
 
+  // Browser mein hi photo chhoti karo — phone se 8MB photo seedha 300KB ho jaati hai,
+  // upload 10x fast aur server timeout nahi hota. HEIC jo decode na ho, original jaati hai
+  // (server heic-convert se handle karta hai).
+  const compressImage = async (file: File): Promise<File> => {
+    if (!file.type.startsWith('image/') || file.size < 600 * 1024) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1568 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const blob: Blob | null = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+      if (!blob || blob.size >= file.size) return file;
+      return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+    } catch {
+      return file; // HEIC on Chrome etc. — server handle karega
+    }
+  };
+
+  // HTML error page (deploy restart / 502) ko friendly message banao
+  const safeJson = async (res: Response) => {
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch {
+      throw new Error(`Server thodi der ke liye busy tha (${res.status}). 30 second baad dobara try karo.`);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!detectedExam) return;
     setIsProcessing(true);
@@ -295,11 +325,13 @@ export default function HomePage() {
       localStorage.removeItem('extractedProfile');
       localStorage.removeItem('selectedPost');
 
-      setProcessingStep('📄 Documents padh raha hoon...');
+      setProcessingStep('📦 Photos compress ho rahi hain...');
       const formData = new FormData();
-      for (const doc of uploadedDocs) formData.append(`doc_${doc.type}`, doc.file);
+      for (const doc of uploadedDocs) formData.append(`doc_${doc.type}`, await compressImage(doc.file));
+
+      setProcessingStep('📄 Documents padh raha hoon...');
       const parseRes = await fetch('/api/parse-documents', { method: 'POST', body: formData });
-      const parseData = await parseRes.json();
+      const parseData = await safeJson(parseRes);
       if (!parseData.success) throw new Error(parseData.error || parseData.details || 'Parse failed');
 
       setProcessingStep('✍️ Form fill kar raha hoon...');
@@ -307,7 +339,7 @@ export default function HomePage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ examId: detectedExam.id, profile: parseData.extractedData, postId: selectedPost?.id })
       });
-      const fillData = await fillRes.json();
+      const fillData = await safeJson(fillRes);
       if (!fillData.success) throw new Error(fillData.error || 'Fill failed');
 
       setProcessingStep('✅ Ho gaya!');
