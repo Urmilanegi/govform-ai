@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
     'wrappy',
     'sharp',
     'tesseract.js',
+    'heic-convert',
+    'libheif-js',
   ],
   outputFileTracingIncludes: {
     '/*': [

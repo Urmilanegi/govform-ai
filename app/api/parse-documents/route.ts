@@ -43,6 +43,14 @@ function resolveMimeType(fileName: string, reportedMimeType: string) {
   return normalizedReportedMimeType;
 }
 
+// Pure-JS HEIC decode (libheif WASM) — Linux/Render pe bhi chalta hai
+async function convertHeicWithLib(bytes: Buffer): Promise<Buffer> {
+  // @ts-expect-error — heic-convert has no type declarations
+  const heicConvert = (await import('heic-convert')).default;
+  const output = await heicConvert({ buffer: bytes, format: 'JPEG', quality: 0.85 });
+  return Buffer.from(output);
+}
+
 async function convertHeicWithSips(bytes: Buffer, fileName: string) {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'govform-heic-'));
   const inputPath = path.join(tempDir, fileName || 'upload.heic');
@@ -162,17 +170,23 @@ async function normalizeImageForVision(bytes: Buffer, mimeType: string, fileName
     };
   } catch (error) {
     const isHeicFile = mimeType === 'image/heic' || mimeType === 'image/heif';
-
-    if (isHeicFile && process.platform === 'darwin') {
-      const convertedBuffer = await convertHeicWithSips(bytes, fileName);
-      return normalizeImageForVision(convertedBuffer, 'image/jpeg', fileName.replace(/\.(heic|heif)$/i, '.jpg'));
-    }
+    const jpegName = fileName.replace(/\.(heic|heif)$/i, '.jpg');
 
     if (isHeicFile) {
-      // Render (Linux) pe sips nahi hai aur sharp HEIC decode nahi karta
-      throw new Error(
-        `iPhone ki HEIC photo "${fileName}" supported nahi hai. Photo ko JPG mein bhejo — iPhone pe Settings > Camera > Formats > "Most Compatible" karo, ya photo ka screenshot leke upload karo.`
-      );
+      // Pehle pure-JS converter (Linux/Render), phir macOS sips fallback
+      try {
+        const convertedBuffer = await convertHeicWithLib(bytes);
+        return normalizeImageForVision(convertedBuffer, 'image/jpeg', jpegName);
+      } catch (libError) {
+        console.error('heic-convert failed:', libError);
+        if (process.platform === 'darwin') {
+          const convertedBuffer = await convertHeicWithSips(bytes, fileName);
+          return normalizeImageForVision(convertedBuffer, 'image/jpeg', jpegName);
+        }
+        throw new Error(
+          `iPhone photo "${fileName}" convert nahi ho paayi. Photo ka screenshot leke upload karo, ya iPhone pe Settings > Camera > Formats > "Most Compatible" karke nayi photo lo.`
+        );
+      }
     }
 
     throw new Error(`Image "${fileName}" process nahi ho paayi — file corrupt ya unsupported format hai. JPG/PNG try karo.`);
